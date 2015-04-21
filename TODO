@@ -1,0 +1,9 @@
+MUST:
+- support ipv6
+- daemonize
+- syslog
+
+MAYBE:
+- ctrl client to view current "sessions", refresh etc
+- config file
+- support multiple different setups with one process

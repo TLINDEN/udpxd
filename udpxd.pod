@@ -1,0 +1,108 @@
+=head1 NAME
+
+udpxd - A general purpose UDP relay/port forwarder/proxy
+
+=head1 SYNOPSIS
+
+ Usage: udpxd [-lbdvhV]
+ 
+ Options:
+ --listen  -l <ip:port>     listen for incoming requests
+ --bind    -b <ip>          bind ip used for outgoing requests
+ --dest    -d <ip:port>     destination to forward requests to
+ --help    -h -?            print help message
+ --version -v               print program version
+ --verbose -V               enable verbose logging
+
+=head1 DESCRIPTION
+
+udpxd can be used to forward or proxy UDP client traffic
+to another port on another system. It also supports binding
+to a specific ip address which will be used as the source
+for outgoing packets.
+
+It listens on the ip address and port specified with B<-l>
+and waits for incoming udp packets. If one arrives, it sends
+it to the destination specified with B<-d>. Responses will
+be sent back accordingly.
+
+If B<-b> has not been specified, udpxd uses the operating
+systems default (e.g. routing) as the source where it sends
+requests packets out. If B<-b> has been specified, then it
+binds to the given ip address and uses this as the source
+address.
+
+In any case, udpxd behaves like a proxy. The receiving end
+(B<-d>) only sees the source ip address of the outgoing
+interface of the system running udpxd or the address specified
+with B<-b>.
+
+The options B<-l> and B<-d> are mandatory.
+
+=head1 EXAMPLES
+
+Let's say you operate a multihomed unix system named 'foo'
+with two interfaces: eth0 on the inside, eth1 on the outside:
+
+ foo:
+  eth0: 192.168.1.1
+  eth0: 10.0.0.1
+
+And let's say, you have a client in network 10.0.0.0/24 who whiches to reach
+an ntp server in network 192.168.1.1; and you dont operate a
+firewall, nat or routing on 'foo'. Run udpxd like this:
+
+ udpxd -l 10.0.0.1:123 -d 192.168.1.199:123
+
+Now, if a client with the source ip address 10.0.0.110 sends
+an ntp request to 10.0.0.1:123, udpxd will forward that
+request to 192.168.1.199:123 with the source ip address
+192.168.1.1 (because this is where the route points to: eth0).
+Responses from the ntp server will reach udpxd, which in turn
+sends them back to the client, where they arrive with the source
+address (and port) where udpxd is listening.
+
+As you can see, udpxd canbe used to implement hiding nat for
+udp services in user space.
+
+Another example would be, if 'foo' has multiple ip addresses
+on eth0 (aliases) and you don't want to use the primary address
+of the interface for outgoing packets. 
+
+ foo, again:
+  eth0: 192.168.1.1,192.168.1.45
+  eth0: 10.0.0.1
+
+In order to use 192.168.1.45 as the source ip address, use the
+B<-b> parameter:
+
+  udpxd -l 10.0.0.1:123 -d 192.168.1.199:123 -b 192.168.1.45
+
+In this case for the client everything looks as before, but the
+ntp server on the other end will see ntp requests coming from
+192.168.1.45.
+
+=head1 FILES
+
+udpxd currently does not write or open any files.
+
+=head1 BUGS
+
+In order to report a bug, unexpected behavior, feature requests
+or to submit a patch, please open an issue on github:
+L<https://github.com/TLINDEN/udpxd/issues>.
+
+=head1 LICENSE
+
+This software is licensed under the GNU GENERAL PUBLIC LICENSE version 3.
+
+Copyright (c) 2015 by T. v. Dein.
+
+This software uses B<uthash> (bundled), which is
+Copyright (c) 2003-2013 by Troy D. Hanson.
+
+=head1 AUTHORS
+
+T.v.Dein B<tom AT vondein DOT org>
+
+=cut
