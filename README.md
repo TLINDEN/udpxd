@@ -21,7 +21,7 @@ If it is already installed, you can read the manual page:
 # Installation
 
 This software doesn't have eny external dependencies, but
-you need either BSD make or GNU make installed.
+you need either BSD make or GNU make installed to build it.
 
 First you need to check out the source code. Skip this, if
 you have already done so:
