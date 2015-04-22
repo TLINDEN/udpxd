@@ -2,6 +2,7 @@ MUST:
 - support ipv6
 - daemonize
 - syslog
+- if compiled with -O2, gcc mangles the dst sockaddr_in pointers in some weird ways
 
 MAYBE:
 - ctrl client to view current "sessions", refresh etc

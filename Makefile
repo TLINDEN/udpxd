@@ -18,8 +18,8 @@
 #
 #    You can contact me by mail: <tom AT vondein DOT org>.
 
-
-CFLAGS = -Wall -Wextra -Werror -O2 -g
+# warning: do not set -O to 2, see TODO
+CFLAGS = -Wall -Wextra -Werror -O1 -g
 LDFLAGS=
 OBJS   = client.o net.o udpxd.o
 DST    = udpxd

@@ -24,8 +24,8 @@
 
 
 char *ntoa(struct sockaddr_in *src) {
-  char *ip;
-  ip = inet_ntoa(src->sin_addr);
+  char *ip = malloc(32);
+  inet_ntop(AF_INET, (struct in_addr *)&src->sin_addr, ip, 32);
   return ip;
 }
 
@@ -85,11 +85,10 @@ void handle_inside(int inside, char *bindip, struct sockaddr_in *dst) {
   int output;
   char *srcip;
   char *dstip = ntoa(dst);
-  socklen_t size;
-  src = malloc(sizeof(struct sockaddr_in));
+  size_t size = sizeof(struct sockaddr_in);
+  src = malloc(size);
   
-  len = recvfrom( inside, buffer, sizeof( buffer ), 0,
-		  (struct sockaddr*)src, &size );
+  len = recvfrom( inside, buffer, sizeof( buffer ), 0, (struct sockaddr*)src, (socklen_t *)&size );
   srcip = ntoa(src);
 
   if(VERBOSE) {
@@ -109,7 +108,7 @@ void handle_inside(int inside, char *bindip, struct sockaddr_in *dst) {
   
       }
       if(sendto(client->socket, buffer, len, 0, (struct sockaddr*)dst, size) < 0) {
-	fprintf(stderr, "unable to forward to %s%d", dstip, ntohs(dst->sin_port));
+	fprintf(stderr, "unable to forward to %s:%d\n", dstip, ntohs(dst->sin_port));
 	perror(NULL);
       }
       else {
@@ -131,7 +130,7 @@ void handle_inside(int inside, char *bindip, struct sockaddr_in *dst) {
       
       /* send req out */
       if(sendto(output, buffer, len, 0, (struct sockaddr*)dst, size) < 0) {
-	fprintf(stderr, "unable to forward to %s%d", dstip, ntohs(dst->sin_port));
+	fprintf(stderr, "unable to forward to %s:%d\n", dstip, ntohs(dst->sin_port));
 	perror(NULL);
       }
       else {
@@ -151,6 +150,9 @@ void handle_inside(int inside, char *bindip, struct sockaddr_in *dst) {
       }
     }
   }
+
+  free(dstip);
+  free(srcip);
 }
 
 /* handle answer from the outside */
@@ -159,12 +161,11 @@ void handle_outside(int inside, int outside) {
   unsigned char buffer[MAX_BUFFER_SIZE];
   struct sockaddr_in *src;
   client_t *client;
-  socklen_t size;
 
-  src = malloc(sizeof(struct sockaddr_in));
+  size_t size = sizeof(struct sockaddr_in);
+  src = malloc(size);
   
-  len = recvfrom( outside, buffer, sizeof( buffer ), 0,
-		  (struct sockaddr*)src, &size );
+  len = recvfrom( outside, buffer, sizeof( buffer ), 0, (struct sockaddr*)src, (socklen_t *)&size );
 
   if(len > 0) {
     /* do we know it? */
