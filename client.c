@@ -58,12 +58,6 @@ client_t *client_new(int fd, struct sockaddr_in *src, struct sockaddr_in *dst) {
 }
 
 void client_close(client_t *client) {
-  if(VERBOSE) {
-    char *srcip  = inet_ntoa(client->src->sin_addr);
-    char *bindip = inet_ntoa(client->dst->sin_addr);
-    fprintf(stderr, "closing socket %s:%d for client %s:%d (aged out)\n",
-	    srcip, ntohs(client->src->sin_port), bindip, ntohs(client->dst->sin_port));
-  }
   client_del(client);
   close(client->socket);
   free(client->src);
@@ -78,6 +72,12 @@ void client_clean() {
   client_iter(clients, current) {
     diff = now - current->lastseen;
     if(diff >= MAXAGE) {
+      if(VERBOSE) {
+	char *srcip  = inet_ntoa(current->src->sin_addr);
+	char *bindip = inet_ntoa(current->dst->sin_addr);
+	fprintf(stderr, "closing socket %s:%d for client %s:%d (aged out after %d seconds)\n",
+		srcip, ntohs(current->src->sin_port), bindip, ntohs(current->dst->sin_port), MAXAGE);
+      }
       client_close(current);
     }
   }
