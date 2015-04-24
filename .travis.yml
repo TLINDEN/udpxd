@@ -8,7 +8,7 @@ compiler:
   - clang
   - gcc
 script:
- - make PREFIX=/usr
+ - make
  - sudo make install
  - sudo udpxd -l 127.0.0.1:53 -d 8.8.8.8:53 &
  - dig +nocmd +noall +answer google.de a @127.0.0.1
