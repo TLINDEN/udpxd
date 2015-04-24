@@ -27,43 +27,70 @@
 client_t *clients = NULL;
 int VERBOSE = 0;
 
-/* runs forever, handles incoming requests on the inside and answers on the outside */
-int main_loop(int listensocket, char *bindip, struct sockaddr_in *dst) {
-    int max, sender;
-    fd_set fds;
+/* parse ip:port */
+int parse_ip(char *src, char *ip, char *pt) {
+  char *ptr = NULL;
 
-    for(;;) {
-      FD_ZERO(&fds);
-      max = fill_set(&fds);
+  if (strchr(optarg, '[')) {
+    /* v6 */
+    ptr = strtok(&src[1], "]");
 
-      FD_SET(listensocket, &fds);
-      if (listensocket > max)
-	max = listensocket;
-
-      select(max + 1, &fds, NULL, NULL, NULL);
-
-      if (FD_ISSET(listensocket, &fds)) {
-	/* incoming client on the inside, get src, bind output fd, add to list
-	   if known, otherwise just handle it  */
-	handle_inside(listensocket, bindip, dst);
-      }
-      else {
-	/* remote answer came in on an output fd, proxy back to the inside */
-	sender = get_sender(&fds);
-	handle_outside(listensocket, sender);
-      }
-
-      /* close old outputs, if any */
-      client_clean();
+    if(strlen(ptr) > INET6_ADDRSTRLEN) {
+      fprintf(stderr, "ip v6 address is too long!\n");
+      return 1;
     }
+    
+    strncpy(ip, ptr, strlen(ptr)+1);
+    ptr = strtok(NULL, "]");
+    if(ptr)
+      ptr = &ptr[1]; /* remove : */
+  }
+  else if(strchr(optarg, ':')) {
+    /* v4 */
+    ptr = strtok(src, ":");
+    
+    if(strlen(ptr) > INET_ADDRSTRLEN) {
+      fprintf(stderr, "ip v4 address is too long!\n");
+      return 1;
+    }
+    
+    strncpy(ip, ptr, strlen(ptr)+1);
+    ptr = strtok(NULL, ":");
+  }
+  else {
+    fprintf(stderr, "Invalid ip/port specification!\n");
+    return 1;
+  }
+
+  if(ptr != NULL) {
+    /* got a port */
+    if(strlen(ptr) > 5) {
+      fprintf(stderr, "port is too long!\n");
+      return 1;
+    }
+    else {
+      if(atoi(ptr) > 65535) {
+	fprintf(stderr, "maximum port number possible: 65535!\n");
+	return 1;
+      }
+      strncpy(pt, ptr, strlen(ptr)+1);
+    }
+  }
+  else {
+    fprintf(stderr, "Port is missing!\n");
+    return 1;
+  }
+
+  return 0;
 }
 
 
+
+
 int main ( int argc, char* argv[] ) {
-  int listen, opt;
+  int opt, err;
   char *inip, *inpt, *srcip, *dstip, *dstpt;
-  struct sockaddr_in *dst;
-  char colon[] = ":";
+  err = 0;
   
   static struct option longopts[] = {
     { "listen",    required_argument, NULL,           'l' },
@@ -80,7 +107,7 @@ int main ( int argc, char* argv[] ) {
   }
 
   srcip = dstip = inip = dstpt = inpt = NULL;
-    
+  
   while ((opt = getopt_long(argc, argv, "l:b:d:vVh?", longopts, NULL)) != -1) {
     switch (opt) {
     case 'v':
@@ -96,49 +123,27 @@ int main ( int argc, char* argv[] ) {
       VERBOSE = 1;
       break;
     case 'l':
-      if(strchr(optarg, ':')) {
-	  char *ptr = NULL;
-	  ptr = strtok(optarg, colon);
-	  inip = malloc( strlen(ptr)+1);
-	  strncpy(inip, ptr, strlen(ptr)+1);
-	  ptr = strtok(NULL, colon);
-	  if(ptr != NULL) {
-	    inpt = malloc( strlen(ptr)+1);
-	    strncpy(inpt, ptr, strlen(ptr)+1);
-	  }
-	  else {
-	    fprintf(stderr, "Listen port for parameter -l is missing!\n");
-	    return 0;
-	  }
-      }
-      else {
+      inip  = malloc(INET6_ADDRSTRLEN+1);
+      inpt  = malloc(6);
+      if (parse_ip(optarg, inip, inpt) != 0) {
 	fprintf(stderr, "Parameter -l has the format <ip-address:port>!\n");
-	return 0;
+	err = 1;
       }
       break;
     case 'd':
-      if(strchr(optarg, ':')) {
-	  char *ptr = NULL;
-	  ptr = strtok(optarg, colon);
-	  dstip = malloc( strlen(ptr)+1);
-	  strncpy(dstip, ptr, strlen(ptr)+1);
-	  ptr = strtok(NULL, colon);
-	  if(ptr != NULL) {
-	    dstpt = malloc( strlen(ptr)+1);
-	    strncpy(dstpt, ptr, strlen(ptr)+1);
-	  }
-	  else {
-	    fprintf(stderr, "Destination port for parameter -d is missing!\n");
-	    return 0;
-	  }
-      }
-      else {
+      dstip = malloc(INET6_ADDRSTRLEN+1);
+      dstpt = malloc(6);
+      if (parse_ip(optarg, dstip, dstpt) != 0) {
 	fprintf(stderr, "Parameter -d has the format <ip-address:port>!\n");
-	return 0;
+	err = 1;
       }
       break;
     case 'b':
-      srcip = malloc(strlen(optarg));
+      if(strlen(optarg) > INET6_ADDRSTRLEN) {
+	fprintf(stderr, "Bind ip address is too long!\n");
+	err = 1;
+      }
+      srcip = malloc(INET6_ADDRSTRLEN+1);
       strncpy(srcip, optarg, strlen(optarg));
       break;
     default:
@@ -151,36 +156,33 @@ int main ( int argc, char* argv[] ) {
   if(inip == NULL) {
     fprintf(stderr, "-l parameter is required!\n");
     usage();
-    return 1;
+    err = 1;
   }
   
   if(dstip == NULL) {
     fprintf(stderr, "-d parameter is required!\n");
     usage();
-    return 1;
+    err = 1;
   }
 
-  listen = bindsocket(inip, atoi(inpt));
-
-  dst = malloc(sizeof(struct sockaddr_in));
-  dst->sin_family = AF_INET;
-  dst->sin_addr.s_addr = inet_addr( dstip );
-  dst->sin_port = htons( atoi( dstpt ) );
-
-  if(VERBOSE) {
-    fprintf(stderr, "Listening on %s:%s, forwarding to %s:%s",
-	    inip, inpt, dstip, dstpt);
-    if(srcip != NULL)
-      fprintf(stderr, ", binding to %s\n", srcip);
-    else
-      fprintf(stderr, "\n");
+  if(! err) {
+    err = start_listener (inip, inpt, srcip, dstip, dstpt);
   }
   
-  main_loop(listen, srcip, dst);
+  /* FIXME: add sighandler */
 
-  /* FIXME: add sighandler, clean up mem */
-  
-  return 0;
+  if(srcip != NULL)
+    free(srcip);
+  if(dstip != NULL)
+    free(dstip);
+  if(inip != NULL)
+    free(inip);
+  if(inpt != NULL)
+    free(inpt);
+  if(dstpt != NULL)
+    free(dstpt);
+
+  return err;
 }
 
 void usage() {

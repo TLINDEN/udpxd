@@ -41,5 +41,6 @@
 
 int main_loop(int listensocket, char *bindip, struct sockaddr_in *dst);
 void usage();
+int parse_ip(char *src, char *ip, char *pt);
 
 #endif

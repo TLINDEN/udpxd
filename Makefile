@@ -21,7 +21,7 @@
 # warning: do not set -O to 2, see TODO
 CFLAGS = -Wall -Wextra -Werror -O1 -g
 LDFLAGS=
-OBJS   = client.o net.o udpxd.o
+OBJS   = host.o client.o net.o udpxd.o
 DST    = udpxd
 PREFIX = /usr/local
 UID    = root

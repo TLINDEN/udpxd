@@ -21,6 +21,8 @@
 
 #include "net.h"
 #include "client.h"
+#include "host.h"
+
 
 
 char *ntoa(struct sockaddr_in *src) {
@@ -28,6 +30,7 @@ char *ntoa(struct sockaddr_in *src) {
   inet_ntop(AF_INET, (struct in_addr *)&src->sin_addr, ip, 32);
   return ip;
 }
+
 
 /* called each time when the loop restarts to feed select() correctly */
 int fill_set(fd_set *fds) {
@@ -58,57 +61,106 @@ int get_sender(fd_set *fds) {
     return i;
 }
 
+
 /* bind to a socket, either for listen() or for outgoing src ip binding */
-int bindsocket( char* ip, int port ) {
+int bindsocket( host_t *sock_h) {
   int fd;
-  struct sockaddr_in addr;
+  int err = 0;
 
-  addr.sin_family = AF_INET;
-  addr.sin_addr.s_addr = inet_addr( ip );
-  addr.sin_port = htons( port );
+  if(sock_h->is_v6) {
+    fd = socket( PF_INET6, SOCK_DGRAM, IPPROTO_UDP );
+  }
+  else {
+    fd = socket( PF_INET, SOCK_DGRAM, IPPROTO_UDP );
+  }
 
-  fd = socket( PF_INET, SOCK_DGRAM, IPPROTO_IP );
-  if( -1 == bind( fd, (struct sockaddr*)&addr, sizeof( addr ) ) ) {
-    fprintf( stderr, "Cannot bind address (%s:%d)\n", ip, port );
-    exit( 1 );
+  if( -1 == bind( fd, (struct sockaddr*)sock_h->sock, sock_h->size ) ) {
+    err = 1;
+  }
+
+  if(err) {
+    fprintf( stderr, "Cannot bind address ([%s]:%d)\n", sock_h->ip, sock_h->port );
+    perror(NULL);
+    return -1;
   }
   
   return fd;
 }
 
-/* handle new or known incoming requests */
-void handle_inside(int inside, char *bindip, struct sockaddr_in *dst) {
-  int len;
-  unsigned char buffer[MAX_BUFFER_SIZE];
-  struct sockaddr_in *src;
-  client_t *client;
-  int output;
-  char *srcip;
-  char *dstip = ntoa(dst);
-  size_t size = sizeof(struct sockaddr_in);
-  src = malloc(size);
-  
-  len = recvfrom( inside, buffer, sizeof( buffer ), 0, (struct sockaddr*)src, (socklen_t *)&size );
-  srcip = ntoa(src);
+int start_listener (char *inip, char *inpt, char *srcip, char *dstip, char *dstpt) {
+  host_t *listen_h = get_host(inip, atoi(inpt), NULL, NULL);
+  host_t *dst_h    = get_host(dstip, atoi(dstpt), NULL, NULL);
+  host_t *bind_h   = NULL;
+
+  if(srcip != NULL) {
+    bind_h   = get_host(srcip, 0, NULL, NULL);
+  }
+  else {
+    if(dst_h->is_v6)
+      bind_h = get_host("::0", 0, NULL, NULL);
+    else
+      bind_h = get_host("0.0.0.0", 0, NULL, NULL);
+  }
+
+  int listen = bindsocket(listen_h);
+
+  if(listen == -1)
+    return 1;
 
   if(VERBOSE) {
-    char *srcip = ntoa(src);
+    fprintf(stderr, "Listening on %s:%s, forwarding to %s:%s",
+	    inip, inpt, dstip, dstpt);
+    if(srcip != NULL)
+      fprintf(stderr, ", binding to %s\n", srcip);
+    else
+      fprintf(stderr, "\n");
+  }
+  
+  main_loop(listen, listen_h, bind_h, dst_h);
+
+  return 0;
+}
+
+/* handle new or known incoming requests
+   FIXME: check client handling:
+   http://long.ccaba.upc.es/long/045Guidelines/eva/ipv6.html#daytimeServer6
+*/
+void handle_inside(int inside, host_t *listen_h, host_t *bind_h, host_t *dst_h) {
+  int len;
+  unsigned char buffer[MAX_BUFFER_SIZE];
+  void *src;
+  client_t *client;
+  host_t *src_h;
+  int output;
+  size_t size = listen_h->size;
+
+  src = malloc(size);
+  
+  len = recvfrom( inside, buffer, sizeof( buffer ), 0,
+		  (struct sockaddr*)src, (socklen_t *)&size );
+
+  if(listen_h->is_v6)
+    src_h = get_host(NULL, 0, NULL, (struct sockaddr_in6 *)src);
+  else
+    src_h = get_host(NULL, 0, (struct sockaddr_in *)src, NULL);
+
+  if(VERBOSE) {
     fprintf(stderr, "New incomming request from %s:%d with %d bytes\n",
-	    srcip, ntohs(src->sin_port), len);
+	    src_h->ip, src_h->port, len);
   }
 
   if(len > 0) {
     /* do we know it ? */
-    client = client_find_src(src);
+    client = client_find_src(src_h);
     if(client != NULL) {
       /* yes, we know it, send req out via existing bind socket */
       if(VERBOSE) {
 	fprintf(stderr, "Client %s:%d is known, forwarding data to %s:%d\n",
-		srcip, ntohs(src->sin_port), dstip, ntohs(dst->sin_port));
-  
+		src_h->ip, src_h->port, dst_h->ip, dst_h->port);
+	
       }
-      if(sendto(client->socket, buffer, len, 0, (struct sockaddr*)dst, size) < 0) {
-	fprintf(stderr, "unable to forward to %s:%d\n", dstip, ntohs(dst->sin_port));
+      if(sendto(client->socket, buffer, len, 0, (struct sockaddr*)dst_h->sock, dst_h->size) < 0) {
+	fprintf(stderr, "unable to forward to %s:%d\n", dst_h->ip, dst_h->port);
 	perror(NULL);
       }
       else {
@@ -119,29 +171,38 @@ void handle_inside(int inside, char *bindip, struct sockaddr_in *dst) {
       /* unknown client, open new out socket */
       if(VERBOSE) {
 	fprintf(stderr, "Client %s:%d is unknown, forwarding data to %s:%d ",
-		srcip, ntohs(src->sin_port), dstip, ntohs(dst->sin_port));
+		src_h->ip, src_h->port, dst_h->ip, dst_h->port);
   
       }
 
-      if(bindip == NULL)
-	output = bindsocket("0.0.0.0", 0);
-      else
-	output = bindsocket(bindip, 0);
+      output = bindsocket(bind_h);
       
       /* send req out */
-      if(sendto(output, buffer, len, 0, (struct sockaddr*)dst, size) < 0) {
-	fprintf(stderr, "unable to forward to %s:%d\n", dstip, ntohs(dst->sin_port));
+      if(sendto(output, buffer, len, 0, (struct sockaddr*)dst_h->sock, dst_h->size) < 0) {
+	fprintf(stderr, "unable to forward to %s:%d\n", dst_h->ip, dst_h->port);
 	perror(NULL);
       }
       else {
-	struct sockaddr_in *ret = malloc(size);
-	getsockname(output, (struct sockaddr*)ret, (socklen_t *)&size);
-	client = client_new(output, src, ret);
+	size = listen_h->size;
+	host_t *ret_h;
+	if(listen_h->is_v6) {
+	  struct sockaddr_in6 *ret = malloc(size);
+	  getsockname(output, (struct sockaddr*)ret, (socklen_t *)&size);
+	  ret_h = get_host(NULL, 0, NULL, ret);
+	  client = client_new(output, src_h, ret_h);
+	}
+	else {
+	  struct sockaddr_in *ret = malloc(size);	  
+	  getsockname(output, (struct sockaddr*)ret, (socklen_t *)&size);
+	  ret_h = get_host(NULL, 0, ret, NULL);
+	  client = client_new(output, src_h, ret_h);
+	}
+
 	client_add(client);
+
 	if(VERBOSE) {
-	  if(bindip != NULL) {
-	    char *bindip = ntoa(ret);
-	    fprintf(stderr, "from %s:%d\n", bindip, ntohs(ret->sin_port));
+	  if(strcmp(bind_h->ip, "0.0.0.0") != 0 || strcmp(bind_h->ip, "::0") != 0) {
+	    fprintf(stderr, "from %s:%d\n", ret_h->ip, ret_h->port);
 	  }
 	  else {
 	    fprintf(stderr, "\n");
@@ -151,18 +212,17 @@ void handle_inside(int inside, char *bindip, struct sockaddr_in *dst) {
     }
   }
 
-  free(dstip);
-  free(srcip);
+  /* FIXME: free? */
 }
 
 /* handle answer from the outside */
-void handle_outside(int inside, int outside) {
+void handle_outside(int inside, int outside, host_t *outside_h) {
   int len;
   unsigned char buffer[MAX_BUFFER_SIZE];
-  struct sockaddr_in *src;
+  void *src;
   client_t *client;
 
-  size_t size = sizeof(struct sockaddr_in);
+  size_t size = outside_h->size;
   src = malloc(size);
   
   len = recvfrom( outside, buffer, sizeof( buffer ), 0, (struct sockaddr*)src, (socklen_t *)&size );
@@ -172,7 +232,7 @@ void handle_outside(int inside, int outside) {
     client = client_find_fd(outside);
     if(client != NULL) {
       /* yes, we know it */
-      if(sendto(inside, buffer, len, 0, (struct sockaddr*)client->src, size) < 0) {
+      if(sendto(inside, buffer, len, 0, (struct sockaddr*)client->src, client->size) < 0) {
 	perror("unable to send back to client"); /* FIXME: add src+port */
 	client_close(client);
       }
@@ -180,3 +240,33 @@ void handle_outside(int inside, int outside) {
   }
 }
 
+/* runs forever, handles incoming requests on the inside and answers on the outside */
+int main_loop(int listensocket, host_t *listen_h, host_t *bind_h, host_t *dst_h) {
+    int max, sender;
+    fd_set fds;
+
+    for(;;) {
+      FD_ZERO(&fds);
+      max = fill_set(&fds);
+
+      FD_SET(listensocket, &fds);
+      if (listensocket > max)
+	max = listensocket;
+
+      select(max + 1, &fds, NULL, NULL, NULL);
+
+      if (FD_ISSET(listensocket, &fds)) {
+	/* incoming client on the inside, get src, bind output fd, add to list
+	   if known, otherwise just handle it  */
+	handle_inside(listensocket, listen_h, bind_h, dst_h);
+      }
+      else {
+	/* remote answer came in on an output fd, proxy back to the inside */
+	sender = get_sender(&fds);
+	handle_outside(listensocket, sender, dst_h);
+      }
+
+      /* close old outputs, if any */
+      client_clean();
+    }
+}

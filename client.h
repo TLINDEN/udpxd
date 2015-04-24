@@ -39,14 +39,16 @@ typedef uint8_t byte;
 #endif
 
 #include "uthash.h"
+#include "host.h"
 
 #define MAXAGE         3600 /* seconds after which to close outgoing sockets and forget client src */
 
 struct _client_t {
   int socket;               /* bind socket for outgoing traffic */
-  struct sockaddr_in *src;  /* client src (ip+port) from incoming socket */
-  struct sockaddr_in *dst;  /* client dst (ip+port) to outgoing socket */
+  host_t *src;              /* client src (ip+port) from incoming socket */
+  host_t *dst;              /* client dst (ip+port) to outgoing socket */
   uint64_t lastseen;        /* when did we recv last time from it */
+  size_t size;              /* sockaddr size */
   UT_hash_handle hh;
 };
 typedef struct _client_t client_t;
@@ -78,8 +80,8 @@ void client_close(client_t *client);
 void client_clean();
 
 client_t *client_find_fd(int fd);
-client_t *client_find_src(struct sockaddr_in *src);
-client_t *client_new(int fd, struct sockaddr_in *src, struct sockaddr_in *dst);
+client_t *client_find_src(host_t *src);
+client_t *client_new(int fd, host_t *src, host_t *dst);
 
 
 #endif

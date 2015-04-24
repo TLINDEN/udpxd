@@ -35,10 +35,10 @@ client_t *client_find_fd(int fd) {
   return client; /*  maybe NULL! */
 }
 
-client_t *client_find_src(struct sockaddr_in *src) {
+client_t *client_find_src(host_t *src) {
   client_t *current = NULL;
   client_iter(clients, current) {
-    if (current->src == src)
+    if(strcmp(current->src->ip, src->ip) == 0 && current->src->port == src->port)
       return current;
   }
   return NULL;
@@ -48,7 +48,7 @@ void client_seen(client_t *client) {
   client->lastseen = (long)time(0);
 }
 
-client_t *client_new(int fd, struct sockaddr_in *src, struct sockaddr_in *dst) {
+client_t *client_new(int fd, host_t *src, host_t *dst) {
   client_t *client = malloc(sizeof(client_t));
   client->socket = fd;
   client->src = src;
@@ -73,10 +73,8 @@ void client_clean() {
     diff = now - current->lastseen;
     if(diff >= MAXAGE) {
       if(VERBOSE) {
-	char *srcip  = inet_ntoa(current->src->sin_addr);
-	char *bindip = inet_ntoa(current->dst->sin_addr);
 	fprintf(stderr, "closing socket %s:%d for client %s:%d (aged out after %d seconds)\n",
-		srcip, ntohs(current->src->sin_port), bindip, ntohs(current->dst->sin_port), MAXAGE);
+		current->src->ip, current->src->port, current->dst->ip, current->dst->port, MAXAGE);
       }
       client_close(current);
     }

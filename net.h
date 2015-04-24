@@ -35,6 +35,7 @@
 #include <sys/fcntl.h>
 #include <arpa/inet.h>
 
+
 #include "client.h"
 
 #define MAX_BUFFER_SIZE 65535
@@ -42,10 +43,20 @@
 extern client_t *clients;
 extern int VERBOSE;
 
+
+
+void handle_inside(int inside, host_t *listen_h, host_t *bind_h, host_t *dst_h);
+void handle_outside(int inside, int outside, host_t *outside_h);
+
+int main_loop(int listensocket, host_t *listen_h, host_t *bind_h, host_t *dst_h);
+int start_listener (char *inip, char *inpt, char *srcip, char *dstip, char *dstpt);
+
 int fill_set(fd_set *fds);
 int get_sender(fd_set *fds);
-int bindsocket( char* ip, int port );
-void handle_inside(int inside, char *bindip, struct sockaddr_in *dst);
-void handle_outside(int inside, int outside);
+int bindsocket( host_t *sock_h);
+
+
+
+#define _IS_LINK_LOCAL(a) do { IN6_IS_ADDR_LINKLOCAL(a); } while(0)
 
 #endif
