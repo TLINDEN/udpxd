@@ -6,4 +6,8 @@ compiler:
   - clang
   - gcc
 script:
- - make
+ - make PREFIX=/usr
+ - sudo make install
+ - sudo udpxd -l 127.0.0.1:53 -d 8.8.8.8:53 &; echo $? > /tmp/udpxd.pid
+ - dig +nocmd +noall +answer google.de a @127.0.0.1
+ - sudo kill `cat /tmp/udpxd.pid`
