@@ -50,5 +50,7 @@ unsigned get_v6_scope(const char *ip);
 int is_linklocal(struct in6_addr *a);
 host_t *get_host(char *ip, int port, struct sockaddr_in *v4, struct sockaddr_in6 *v6);
 char *is_v6(char *ip);
+void host_dump(host_t *host);
+void host_clean(host_t *host);
 
 #endif

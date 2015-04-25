@@ -28,6 +28,8 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <time.h>
+#include <signal.h>
+#include <setjmp.h>
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -54,7 +56,7 @@ int start_listener (char *inip, char *inpt, char *srcip, char *dstip, char *dstp
 int fill_set(fd_set *fds);
 int get_sender(fd_set *fds);
 int bindsocket( host_t *sock_h);
-
+void int_handler(int  sig);
 
 
 #define _IS_LINK_LOCAL(a) do { IN6_IS_ADDR_LINKLOCAL(a); } while(0)

@@ -102,6 +102,7 @@ int start_listener (char *inip, char *inpt, char *srcip, char *dstip, char *dstp
       bind_h = get_host("0.0.0.0", 0, NULL, NULL);
   }
 
+
   int listen = bindsocket(listen_h);
 
   if(listen == -1)
@@ -118,13 +119,14 @@ int start_listener (char *inip, char *inpt, char *srcip, char *dstip, char *dstp
   
   main_loop(listen, listen_h, bind_h, dst_h);
 
+  host_clean(bind_h);
+  host_clean(listen_h);
+  host_clean(dst_h);
+
   return 0;
 }
 
-/* handle new or known incoming requests
-   FIXME: check client handling:
-   http://long.ccaba.upc.es/long/045Guidelines/eva/ipv6.html#daytimeServer6
-*/
+/* handle new or known incoming requests */
 void handle_inside(int inside, host_t *listen_h, host_t *bind_h, host_t *dst_h) {
   int len;
   unsigned char buffer[MAX_BUFFER_SIZE];
@@ -144,6 +146,8 @@ void handle_inside(int inside, host_t *listen_h, host_t *bind_h, host_t *dst_h) 
   else
     src_h = get_host(NULL, 0, (struct sockaddr_in *)src, NULL);
 
+  free(src);
+
   if(VERBOSE) {
     fprintf(stderr, "New incomming request from %s:%d with %d bytes\n",
 	    src_h->ip, src_h->port, len);
@@ -155,7 +159,7 @@ void handle_inside(int inside, host_t *listen_h, host_t *bind_h, host_t *dst_h) 
     if(client != NULL) {
       /* yes, we know it, send req out via existing bind socket */
       if(VERBOSE) {
-	fprintf(stderr, "Client %s:%d is known, forwarding data to %s:%d\n",
+	fprintf(stderr, "Client %s:%d is known, forwarding data to %s:%d ",
 		src_h->ip, src_h->port, dst_h->ip, dst_h->port);
 	
       }
@@ -189,12 +193,14 @@ void handle_inside(int inside, host_t *listen_h, host_t *bind_h, host_t *dst_h) 
 	  struct sockaddr_in6 *ret = malloc(size);
 	  getsockname(output, (struct sockaddr*)ret, (socklen_t *)&size);
 	  ret_h = get_host(NULL, 0, NULL, ret);
+	  free(ret);
 	  client = client_new(output, src_h, ret_h);
 	}
 	else {
 	  struct sockaddr_in *ret = malloc(size);	  
 	  getsockname(output, (struct sockaddr*)ret, (socklen_t *)&size);
 	  ret_h = get_host(NULL, 0, ret, NULL);
+	  free(ret);
 	  client = client_new(output, src_h, ret_h);
 	}
 
@@ -226,47 +232,81 @@ void handle_outside(int inside, int outside, host_t *outside_h) {
   src = malloc(size);
   
   len = recvfrom( outside, buffer, sizeof( buffer ), 0, (struct sockaddr*)src, (socklen_t *)&size );
+  free(src);
 
   if(len > 0) {
     /* do we know it? */
     client = client_find_fd(outside);
     if(client != NULL) {
       /* yes, we know it */
-      if(sendto(inside, buffer, len, 0, (struct sockaddr*)client->src, client->size) < 0) {
+      /* FIXME: check src vs. client->src ? */
+      if(sendto(inside, buffer, len, 0,
+		(struct sockaddr*)client->src->sock, client->src->size) < 0) {
 	perror("unable to send back to client"); /* FIXME: add src+port */
 	client_close(client);
       }
     }
+    else {
+      fprintf(stderr, "weird, no matching client found!\n");
+    }
+  }
+  else {
+    fprintf(stderr, "weird, recvfrom returned 0 bytes!\n");
   }
 }
 
+jmp_buf  JumpBuffer;
+
 /* runs forever, handles incoming requests on the inside and answers on the outside */
 int main_loop(int listensocket, host_t *listen_h, host_t *bind_h, host_t *dst_h) {
-    int max, sender;
-    fd_set fds;
+  int max, sender;
+  fd_set fds;
 
-    for(;;) {
-      FD_ZERO(&fds);
-      max = fill_set(&fds);
+  signal(SIGINT, int_handler);
+  signal(SIGTERM, int_handler);
 
-      FD_SET(listensocket, &fds);
-      if (listensocket > max)
-	max = listensocket;
-
-      select(max + 1, &fds, NULL, NULL, NULL);
-
-      if (FD_ISSET(listensocket, &fds)) {
-	/* incoming client on the inside, get src, bind output fd, add to list
-	   if known, otherwise just handle it  */
-	handle_inside(listensocket, listen_h, bind_h, dst_h);
-      }
-      else {
-	/* remote answer came in on an output fd, proxy back to the inside */
-	sender = get_sender(&fds);
-	handle_outside(listensocket, sender, dst_h);
-      }
-
-      /* close old outputs, if any */
-      client_clean();
+  for(;;) {
+    if (setjmp(JumpBuffer) == 1) {
+      break;
     }
+
+    FD_ZERO(&fds);
+    max = fill_set(&fds);
+
+    FD_SET(listensocket, &fds);
+    if (listensocket > max)
+      max = listensocket;
+
+    select(max + 1, &fds, NULL, NULL, NULL);
+
+    if (FD_ISSET(listensocket, &fds)) {
+      /* incoming client on the inside, get src, bind output fd, add to list
+	 if known, otherwise just handle it  */
+      handle_inside(listensocket, listen_h, bind_h, dst_h);
+    }
+    else {
+      /* remote answer came in on an output fd, proxy back to the inside */
+      sender = get_sender(&fds);
+      handle_outside(listensocket, sender, dst_h);
+    }
+
+    /* close old outputs, if any */
+    client_clean(0);
+  }
+  
+  /* we came here via signal handler,
+     clean up */
+  client_t *current = NULL;
+  client_iter(clients, current) {
+    close(current->socket);
+  }
+  close(listensocket);
+  client_clean(1);
+
+  return 0;
+}
+
+void int_handler(int  sig) {
+  signal(sig, SIG_IGN);
+  longjmp(JumpBuffer, 1);
 }

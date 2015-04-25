@@ -49,6 +49,8 @@ host_t *get_host(char *ip, int port, struct sockaddr_in *v4, struct sockaddr_in6
       host->is_v6 = 1;
       host->sock  = (struct sockaddr*)tmp;
       host->size = sizeof(struct sockaddr_in6);
+      host->ip = malloc(INET6_ADDRSTRLEN+1);
+      memcpy(host->ip, ip, INET6_ADDRSTRLEN);
     }
     else {
       struct sockaddr_in *tmp = malloc(sizeof(struct sockaddr_in));
@@ -58,6 +60,8 @@ host_t *get_host(char *ip, int port, struct sockaddr_in *v4, struct sockaddr_in6
       tmp->sin_port = htons( port );
       host->sock   = (struct sockaddr*)tmp;
       host->size = sizeof(struct sockaddr_in);
+      host->ip = malloc(INET_ADDRSTRLEN+1);
+      memcpy(host->ip, ip, INET_ADDRSTRLEN);
     }
   }
   else if(v4 != NULL) {
@@ -68,6 +72,7 @@ host_t *get_host(char *ip, int port, struct sockaddr_in *v4, struct sockaddr_in6
     host->port = ntohs(tmp->sin_port);
     host->sock = (struct sockaddr*)tmp;
     host->size = sizeof(struct sockaddr_in);
+    //fprintf(stderr, "%s sock: %p\n", host->ip, tmp);
   }
   else if(v6 != NULL) {
     struct sockaddr_in6 *tmp = malloc(sizeof(struct sockaddr_in6));
@@ -129,4 +134,18 @@ unsigned get_v6_scope(const char *ip){
    which doesn't compile, when used directly, for whatever reasons */
 int is_linklocal(struct in6_addr *a) {
   return ((a->s6_addr[0] == 0xfe) && ((a->s6_addr[1] & 0xc0) == 0x80));
+}
+
+void host_dump(host_t *host) {
+  fprintf(stderr, "host -   ip: %s\n", host->ip);
+  fprintf(stderr, "       port: %d\n", host->port);
+  fprintf(stderr, "       isv6: %d\n", host->is_v6);
+  fprintf(stderr, "       size: %ld\n", host->size);
+  fprintf(stderr, "        src: %p\n", host->sock);
+}
+
+void host_clean(host_t *host) {
+  free(host->sock);
+  free(host->ip);
+  free(host);
 }

@@ -48,7 +48,6 @@ struct _client_t {
   host_t *src;              /* client src (ip+port) from incoming socket */
   host_t *dst;              /* client dst (ip+port) to outgoing socket */
   uint64_t lastseen;        /* when did we recv last time from it */
-  size_t size;              /* sockaddr size */
   UT_hash_handle hh;
 };
 typedef struct _client_t client_t;
@@ -77,7 +76,7 @@ void client_del(client_t *client);
 void client_add(client_t *client);
 void client_seen(client_t *client);
 void client_close(client_t *client);
-void client_clean();
+void client_clean(int asap);
 
 client_t *client_find_fd(int fd);
 client_t *client_find_src(host_t *src);

@@ -60,18 +60,18 @@ client_t *client_new(int fd, host_t *src, host_t *dst) {
 void client_close(client_t *client) {
   client_del(client);
   close(client->socket);
-  free(client->src);
-  free(client->dst);
+  host_clean(client->src);
+  host_clean(client->dst);
   free(client);
 }
 
-void client_clean() {
+void client_clean(int asap) {
   uint32_t now = (long)time(0);
   uint32_t diff;
   client_t *current;
   client_iter(clients, current) {
     diff = now - current->lastseen;
-    if(diff >= MAXAGE) {
+    if(diff >= MAXAGE || asap) {
       if(VERBOSE) {
 	fprintf(stderr, "closing socket %s:%d for client %s:%d (aged out after %d seconds)\n",
 		current->src->ip, current->src->port, current->dst->ip, current->dst->port, MAXAGE);
