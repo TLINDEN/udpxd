@@ -1,8 +1,10 @@
 MUST:
 - support ipv6
-  half done: not tested yet, just compiles.
-  check for bind_h: must be same proto as dst_h (both v4 or both v6!)
-- v6ize verbose outputs
+  + half done: not tested yet, just compiles.
+  + check for bind_h: must be same proto as dst_h (both v4 or both v6!)
+  + v6ize verbose outputs
+  + check for scopeid for dst_h (no route to host?), also the id
+    must match for bind_h
 - daemonize
 - syslog
 - if compiled with -O2, gcc mangles the dst sockaddr_in pointers in some weird ways
