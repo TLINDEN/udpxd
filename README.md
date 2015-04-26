@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/TLINDEN/udpxd.svg?branch=master)](https://travis-ci.org/TLINDEN/udpxd)
+[![Build status](https://ci.appveyor.com/api/projects/status/0tujxsr8u324dv9v?svg=true)](https://ci.appveyor.com/project/TLINDEN/udpxd)
 
 ## UDPXD - A general purpose UDP relay/port forwarder/proxy
 

@@ -162,7 +162,7 @@ void host_dump(host_t *host) {
   fprintf(stderr, "host -   ip: %s\n", host->ip);
   fprintf(stderr, "       port: %d\n", host->port);
   fprintf(stderr, "       isv6: %d\n", host->is_v6);
-  fprintf(stderr, "       size: %ld\n", host->size);
+  fprintf(stderr, "       size: %ld\n", (long int)host->size);
   fprintf(stderr, "        src: %p\n", host->sock);
 }
 
