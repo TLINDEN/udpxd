@@ -1,0 +1,18 @@
+environment:
+  global:
+    CYG_ROOT: C:\cygwin
+    CYG_BASH: C:\cygwin\bin\bash
+
+os: unstable
+
+platform:
+  - Win32
+
+test: off
+
+init:
+  - git config --global core.autocrlf input
+
+build_script:
+  - '%CYG_BASH% -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; make"'
+  - '%CYG_BASH% -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; ./udpxd -h"'
