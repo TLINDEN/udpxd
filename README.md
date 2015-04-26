@@ -49,7 +49,7 @@ modify `$PREFIX` during installation time like this:
 
 ## Getting help
 
-Although I'm happy to hear from module users in private email,
+Although I'm happy to hear from udpxd users in private email,
 that's the best way for me to forget to do something.
 
 In order to report a bug, unexpected behavior, feature requests
