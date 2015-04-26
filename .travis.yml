@@ -13,5 +13,5 @@ script:
  - sudo udpxd -l 127.0.0.1:53 -d 8.8.8.8:53
  - sudo udpxd -l [::1]:53 -d [2001:4860:4860::8888]:53
  - dig +nocmd +noall +answer google.de a @127.0.0.1
- - dig +nocmd +noall +answer google.de a @:.1 
+ - dig +nocmd +noall +answer google.de a @:.1 -f -V &
  - sudo killall udpxd
