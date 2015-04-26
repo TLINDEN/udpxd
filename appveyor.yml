@@ -15,9 +15,8 @@ init:
 
 build_script:
   - '%CYG_BASH% -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; make"'
-  - '%CYG_BASH% -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; ./udpxd -l 127.0.0.1:53 -d 100.73.46.80:53 -V -f &"'
-  - '%CYG_BASH% -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; ./udpxd -l [::1]:53 -d 100.73.46.80:53 -V -f &"'
+  - '%CYG_BASH% -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; cygstart --hide ./udpxd -l 127.0.0.1:53 -d 100.73.46.80:53 -V -f"'
+  - '%CYG_BASH% -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; cygstart --hide ./udpxd -l [::1]:53 -d 100.73.46.80:53 -V -f"'
   - 'nslookup www.google.de 127.0.0.1'
   - 'nslookup www.google.de ::1'
-  - '%CYG_BASH% -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; killall udpxd'
 
