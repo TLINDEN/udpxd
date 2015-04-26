@@ -20,7 +20,7 @@ init:
 
 install:
     - ps: 'Start-FileDownload "http://cygwin.com/setup-x86.exe" -FileName "setup-x86.exe"'
-    - 'setup-x86.exe --quiet-mode --no-shortcuts --only-site --root "%CYG_ROOT%" --site "%CYG_MIRROR%" --local-package-dir "%CYG_CACHE%" --packages bind,netcat'
+    - 'setup-x86.exe --quiet-mode --no-shortcuts --only-site --root "%CYG_ROOT%" --site "%CYG_MIRROR%" --local-package-dir "%CYG_CACHE%" --packages bind,netcat,procps > NUL 2>&1'
     - '%CYG_BASH% -lc "cygcheck -dc cygwin"'
 
 build_script:
