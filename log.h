@@ -23,6 +23,7 @@
 #define _HAVE_LOG_H
 
 #define _WITH_DPRINTF
+#define _GNU_SOURCE
 
 #include <stdio.h>
 #include <string.h>
