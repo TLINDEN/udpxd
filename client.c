@@ -20,6 +20,7 @@
 */
 
 #include "client.h"
+#include "log.h"
 
 void client_del(client_t *client) {
   HASH_DEL(clients, client);
@@ -72,10 +73,8 @@ void client_clean(int asap) {
   client_iter(clients, current) {
     diff = now - current->lastseen;
     if(diff >= MAXAGE || asap) {
-      if(VERBOSE) {
-	fprintf(stderr, "closing socket %s:%d for client %s:%d (aged out after %d seconds)\n",
-		current->src->ip, current->src->port, current->dst->ip, current->dst->port, MAXAGE);
-      }
+      verbose("closing socket %s:%d for client %s:%d (aged out after %d seconds)\n",
+	      current->src->ip, current->src->port, current->dst->ip, current->dst->port, MAXAGE);
       client_close(current);
     }
   }

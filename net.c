@@ -22,6 +22,7 @@
 #include "net.h"
 #include "client.h"
 #include "host.h"
+#include "log.h"
 
 
 
@@ -87,10 +88,57 @@ int bindsocket( host_t *sock_h) {
   return fd;
 }
 
-int start_listener (char *inip, char *inpt, char *srcip, char *dstip, char *dstpt) {
-  host_t *listen_h = get_host(inip, atoi(inpt), NULL, NULL);
-  host_t *dst_h    = get_host(dstip, atoi(dstpt), NULL, NULL);
-  host_t *bind_h   = NULL;
+int start_listener (char *inip, char *inpt, char *srcip, char *dstip, char *dstpt, char *pidfile) {
+  host_t *listen_h, *dst_h, *bind_h;
+
+  if(FORKED) {
+    // fork
+    pid_t pid, sid;
+    FILE *fd;
+
+    pid = fork();
+
+    if (pid < 0) {
+      perror("fork error");
+      return 1;
+    }
+
+    if (pid > 0) {
+      /* leave parent */
+      if((fd = fopen(pidfile, "w")) == NULL) {
+	perror("failed to write pidfile");
+	return 1;
+      }
+      else {
+	fprintf(fd, "%d\n", pid);
+	fclose(fd);
+      }
+      return 0;
+    }
+
+
+    sid = setsid();
+    if (sid < 0) {
+      perror("set sid error");
+      return 1;
+    }
+
+    if ((chdir("/")) < 0) {
+      perror("failed to chdir to /");
+      return 1;
+    }
+    
+    umask(0);
+    close(STDIN_FILENO);
+    close(STDOUT_FILENO);
+    close(STDERR_FILENO);
+
+    openlog("udpxd", LOG_NOWAIT|LOG_PID, LOG_USER);
+  }
+
+  listen_h = get_host(inip, atoi(inpt), NULL, NULL);
+  dst_h    = get_host(dstip, atoi(dstpt), NULL, NULL);
+  bind_h   = NULL;
 
   if(srcip != NULL) {
     bind_h   = get_host(srcip, 0, NULL, NULL);
@@ -102,19 +150,18 @@ int start_listener (char *inip, char *inpt, char *srcip, char *dstip, char *dstp
       bind_h = get_host("0.0.0.0", 0, NULL, NULL);
   }
 
-
   int listen = bindsocket(listen_h);
 
   if(listen == -1)
     return 1;
 
   if(VERBOSE) {
-    fprintf(stderr, "Listening on %s:%s, forwarding to %s:%s",
-	    inip, inpt, dstip, dstpt);
+    verbose("Listening on %s:%s, forwarding to %s:%s",
+	    listen_h->ip, inpt, dst_h->ip, dstpt);
     if(srcip != NULL)
-      fprintf(stderr, ", binding to %s\n", srcip);
+      verbose(", binding to %s\n", bind_h->ip);
     else
-      fprintf(stderr, "\n");
+      verbose("\n");
   }
   
   main_loop(listen, listen_h, bind_h, dst_h);
@@ -122,6 +169,8 @@ int start_listener (char *inip, char *inpt, char *srcip, char *dstip, char *dstp
   host_clean(bind_h);
   host_clean(listen_h);
   host_clean(dst_h);
+
+  closelog();
 
   return 0;
 }
@@ -148,21 +197,15 @@ void handle_inside(int inside, host_t *listen_h, host_t *bind_h, host_t *dst_h) 
 
   free(src);
 
-  if(VERBOSE) {
-    fprintf(stderr, "New incomming request from %s:%d with %d bytes\n",
-	    src_h->ip, src_h->port, len);
-  }
-
   if(len > 0) {
     /* do we know it ? */
     client = client_find_src(src_h);
     if(client != NULL) {
       /* yes, we know it, send req out via existing bind socket */
-      if(VERBOSE) {
-	fprintf(stderr, "Client %s:%d is known, forwarding data to %s:%d ",
-		src_h->ip, src_h->port, dst_h->ip, dst_h->port);
-	
-      }
+      verbose("Client %s:%d is known, forwarding %d bytes to %s:%d ",
+	      src_h->ip, src_h->port, len, dst_h->ip, dst_h->port);
+      verb_prbind(bind_h);
+
       if(sendto(client->socket, buffer, len, 0, (struct sockaddr*)dst_h->sock, dst_h->size) < 0) {
 	fprintf(stderr, "unable to forward to %s:%d\n", dst_h->ip, dst_h->port);
 	perror(NULL);
@@ -173,11 +216,9 @@ void handle_inside(int inside, host_t *listen_h, host_t *bind_h, host_t *dst_h) 
     }
     else {
       /* unknown client, open new out socket */
-      if(VERBOSE) {
-	fprintf(stderr, "Client %s:%d is unknown, forwarding data to %s:%d ",
-		src_h->ip, src_h->port, dst_h->ip, dst_h->port);
-  
-      }
+	verbose("Client %s:%d is unknown, forwarding %d bytes to %s:%d ",
+		src_h->ip, src_h->port, len, dst_h->ip, dst_h->port);
+	verb_prbind(bind_h);
 
       output = bindsocket(bind_h);
       
@@ -205,20 +246,9 @@ void handle_inside(int inside, host_t *listen_h, host_t *bind_h, host_t *dst_h) 
 	}
 
 	client_add(client);
-
-	if(VERBOSE) {
-	  if(strcmp(bind_h->ip, "0.0.0.0") != 0 || strcmp(bind_h->ip, "::0") != 0) {
-	    fprintf(stderr, "from %s:%d\n", ret_h->ip, ret_h->port);
-	  }
-	  else {
-	    fprintf(stderr, "\n");
-	  }
-	}
       }
     }
   }
-
-  /* FIXME: free? */
 }
 
 /* handle answer from the outside */
@@ -309,4 +339,15 @@ int main_loop(int listensocket, host_t *listen_h, host_t *bind_h, host_t *dst_h)
 void int_handler(int  sig) {
   signal(sig, SIG_IGN);
   longjmp(JumpBuffer, 1);
+}
+
+void verb_prbind (host_t *bind_h) {
+  if(VERBOSE) {
+    if(strcmp(bind_h->ip, "0.0.0.0") != 0 || strcmp(bind_h->ip, "[::0]") != 0) {
+      verbose("from %s:%d\n", bind_h->ip, bind_h->port);
+    }
+    else {
+      verbose("\n");
+    }
+  }
 }

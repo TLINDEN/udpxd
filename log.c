@@ -19,27 +19,23 @@
     You can contact me by mail: <tom AT vondein DOT org>.
 */
 
-#ifndef _HAVE_UDPXD_H
-#define _HAVE_UDPXD_H
-
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <unistd.h>
-#include <time.h>
-#include <getopt.h>
-
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <sys/types.h>
-#include <sys/fcntl.h>
-#include <arpa/inet.h>
-
-#define UDPXD_VERSION "0.0.2"
+#include "log.h"
 
 
-void usage();
-int parse_ip(char *src, char *ip, char *pt);
 
-#endif
+void verbose(const char * fmt, ...) {
+  if(VERBOSE) {
+    char *msg = NULL;
+    va_list ap;
+    va_start(ap, fmt);
+    vasprintf(&msg, fmt, ap);
+    va_end(ap);
+
+    if(FORKED) {
+      syslog(LOG_INFO, msg);
+    }
+    else {
+      fprintf(stderr, msg);
+    }
+  }
+}

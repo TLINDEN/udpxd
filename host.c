@@ -40,17 +40,24 @@ host_t *get_host(char *ip, int port, struct sockaddr_in *v4, struct sockaddr_in6
       
       tmp->sin6_family = AF_INET6;
       tmp->sin6_port = htons( port );
- 
+
+      unsigned int scope = get_v6_scope(ip);
       if (is_linklocal((struct in6_addr*)&tmp->sin6_addr))
-	tmp->sin6_scope_id = get_v6_scope(ip);
+	tmp->sin6_scope_id = scope;
       else
 	tmp->sin6_scope_id = 0;
 
       host->is_v6 = 1;
       host->sock  = (struct sockaddr*)tmp;
       host->size = sizeof(struct sockaddr_in6);
-      host->ip = malloc(INET6_ADDRSTRLEN+1);
-      memcpy(host->ip, ip, INET6_ADDRSTRLEN);
+      if(tmp->sin6_scope_id != 0) {
+	host->ip = malloc(INET6_ADDRSTRLEN + 9); /* plus [ % ] \0 , scope*/
+	sprintf(host->ip, "[%s%%%d]", ip, scope);
+      }
+      else {
+	host->ip = malloc(INET6_ADDRSTRLEN + 3); /* plus [ ] \0 */
+	sprintf(host->ip, "[%s]", ip);
+      }
     }
     else {
       struct sockaddr_in *tmp = malloc(sizeof(struct sockaddr_in));
@@ -58,6 +65,7 @@ host_t *get_host(char *ip, int port, struct sockaddr_in *v4, struct sockaddr_in6
       tmp->sin_family = AF_INET;
       tmp->sin_addr.s_addr = inet_addr( ip );
       tmp->sin_port = htons( port );
+
       host->sock   = (struct sockaddr*)tmp;
       host->size = sizeof(struct sockaddr_in);
       host->ip = malloc(INET_ADDRSTRLEN+1);
@@ -69,20 +77,31 @@ host_t *get_host(char *ip, int port, struct sockaddr_in *v4, struct sockaddr_in6
     memcpy(tmp, v4, sizeof(struct sockaddr_in));
     host->ip = malloc(INET_ADDRSTRLEN);
     inet_ntop(AF_INET, (struct in_addr *)&tmp->sin_addr, host->ip, INET_ADDRSTRLEN);
+
     host->port = ntohs(tmp->sin_port);
     host->sock = (struct sockaddr*)tmp;
     host->size = sizeof(struct sockaddr_in);
-    //fprintf(stderr, "%s sock: %p\n", host->ip, tmp);
   }
   else if(v6 != NULL) {
     struct sockaddr_in6 *tmp = malloc(sizeof(struct sockaddr_in6));
     memcpy(tmp, v6, sizeof(struct sockaddr_in6));
-    host->ip = malloc(INET6_ADDRSTRLEN);
-    inet_ntop(AF_INET, (struct in6_addr *)&tmp->sin6_addr, host->ip, INET6_ADDRSTRLEN);
+    char *myip = malloc(INET6_ADDRSTRLEN);
+    inet_ntop(AF_INET6, (struct in6_addr *)&tmp->sin6_addr, myip, INET6_ADDRSTRLEN);
+
     host->port = ntohs(tmp->sin6_port);
     host->sock = (struct sockaddr*)tmp;
     host->is_v6 = 1;
     host->size = sizeof(struct sockaddr_in6);
+
+    if(tmp->sin6_scope_id != 0) {
+      host->ip = malloc(INET6_ADDRSTRLEN + 9); /* plus [ % ] \0 , scope*/
+      sprintf(host->ip, "[%s%%%d]", ip, tmp->sin6_scope_id);
+    }
+    else {
+      host->ip = malloc(INET6_ADDRSTRLEN + 3); /* plus [ ] \0 */      
+      sprintf(host->ip, "[%s]", myip);
+    }
+    free(myip);
   }
   else {
     fprintf(stderr, "call invalid!\n");
@@ -92,8 +111,12 @@ host_t *get_host(char *ip, int port, struct sockaddr_in *v4, struct sockaddr_in6
   return host;
 }
 
-char *is_v6(char *ip) {
-  return strchr(ip, ':');
+int is_v6(char *ip) {
+  char *IS = strchr(ip, ':');
+  if(IS == NULL)
+    return 0;
+  else
+    return 1;
 }
 
 /* via http://stackoverflow.com/questions/13504934/binding-sockets-to-ipv6-addresses
@@ -126,7 +149,6 @@ unsigned get_v6_scope(const char *ip){
         }
     }
     freeifaddrs(addrs);
-    fprintf(stderr, "scope: %d\n", scope);
     return scope;
 }
 

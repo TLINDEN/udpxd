@@ -7,7 +7,7 @@ This is the README file for the network program udpxd.
 udpxd can be used to forward or proxy UDP client traffic
 to another port on another system. It also supports binding
 to a specific ip address which will be used as the source
-for outgoing packets.
+for outgoing packets. It supports ip version 4 and 6.
 
 ## Documentation
 

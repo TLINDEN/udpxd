@@ -4,15 +4,17 @@ udpxd - A general purpose UDP relay/port forwarder/proxy
 
 =head1 SYNOPSIS
 
- Usage: udpxd [-lbdvhV]
- 
+ Usage: udpxd [-lbdfpvhV]
+
  Options:
- --listen  -l <ip:port>     listen for incoming requests
- --bind    -b <ip>          bind ip used for outgoing requests
- --dest    -d <ip:port>     destination to forward requests to
- --help    -h -?            print help message
- --version -v               print program version
- --verbose -V               enable verbose logging
+ --listen     -l <ip:port>     listen for incoming requests
+ --bind       -b <ip>          bind ip used for outgoing requests
+ --dest       -d <ip:port>     destination to forward requests to
+ --foreground -f               don't fork into background
+ --pidfile    -p <file>        pidfile, default: /var/run/udpxd.pid
+ --help       -h -?            print help message
+ --version    -v               print program version
+ --verbose    -V               enable verbose logging
 
 =head1 DESCRIPTION
 
@@ -38,6 +40,32 @@ interface of the system running udpxd or the address specified
 with B<-b>.
 
 The options B<-l> and B<-d> are mandatory.
+
+If the option B<-f> has not been specified, udpxd forks into
+the background and becomes a daemon. It writes it pidfile to
+C</var/run/udpxd.pid>, which can be changed with the B<-p>
+option.
+
+B<Caution: udpxd does not drop its privileges. If started as
+root, it will continue to run as root. This may change in the
+future.>
+
+Udpxd supports ip version 4 and 6, it doesn't support hostnames,
+-l, -d and -b must be ip addresses. In order to specify an ipv6
+address and a port, use:
+
+ -l [::1]:53
+
+that is, surround the ipv6 address with brackets.
+
+Port forwardings can be mixed:
+
+ listen | forward to
+ -------+-----------
+ ipv4   | ipv4
+ ipv6   | ipv4
+ ipv4   | ipv6
+ ipv6   | ipv6
 
 =head1 EXAMPLES
 
@@ -82,9 +110,20 @@ In this case for the client everything looks as before, but the
 ntp server on the other end will see ntp requests coming from
 192.168.1.45 instead.
 
+Here we listen on the ip v6 loopback address and forward traffic
+to another ip v6 destination address:
+
+ udpxd -l [::1]:53 -d [2001:4860:4860::8888]:53
+
+Or, we could listen on an ip v4 address and forward to an ip v6
+address:
+
+ udpxd -l 192.168.1.1:53 -d [2001:4860:4860::8888]:53
+
 =head1 FILES
 
-udpxd currently does not write or open any files.
+B</var/run/udpxd.pid>: created if running in daemon mode (-f not
+specified).
 
 =head1 BUGS
 

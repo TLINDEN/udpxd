@@ -26,6 +26,7 @@
 /* global client list */
 client_t *clients = NULL;
 int VERBOSE = 0;
+int FORKED = 1;
 
 /* parse ip:port */
 int parse_ip(char *src, char *ip, char *pt) {
@@ -90,6 +91,8 @@ int parse_ip(char *src, char *ip, char *pt) {
 int main ( int argc, char* argv[] ) {
   int opt, err;
   char *inip, *inpt, *srcip, *dstip, *dstpt;
+  char pidfile[MAX_BUFFER_SIZE];
+
   err = 0;
   
   static struct option longopts[] = {
@@ -98,7 +101,9 @@ int main ( int argc, char* argv[] ) {
     { "dest",      required_argument, NULL,           'd' },
     { "version",   no_argument,       NULL,           'v' },
     { "help",      no_argument,       NULL,           'h' },
-    { "verbose",   no_argument,       NULL,           'V' }
+    { "verbose",   no_argument,       NULL,           'V' },
+    { "foreground",no_argument,       NULL,           'f' },
+    { "pidfile",   required_argument, NULL,           'p' },
   };
 
   if( argc < 2 ) {
@@ -107,12 +112,16 @@ int main ( int argc, char* argv[] ) {
   }
 
   srcip = dstip = inip = dstpt = inpt = NULL;
+  strncpy(pidfile, "/var/run/udpxd.pid", 19);
   
-  while ((opt = getopt_long(argc, argv, "l:b:d:vVh?", longopts, NULL)) != -1) {
+  while ((opt = getopt_long(argc, argv, "l:b:d:vfVh?", longopts, NULL)) != -1) {
     switch (opt) {
     case 'v':
       fprintf(stderr, "This is %s version %s\n", argv[0], UDPXD_VERSION);
       return 1;
+      break;
+    case 'f':
+      FORKED = 0;
       break;
     case 'h':
     case '?':
@@ -146,6 +155,9 @@ int main ( int argc, char* argv[] ) {
       srcip = malloc(INET6_ADDRSTRLEN+1);
       strncpy(srcip, optarg, strlen(optarg));
       break;
+    case 'p':
+      strncpy(pidfile, optarg, strlen(optarg));
+      break;
     default:
       usage();
       return 1;
@@ -165,12 +177,17 @@ int main ( int argc, char* argv[] ) {
     err = 1;
   }
 
+  if(srcip != NULL) {
+    if(is_v6(srcip) != is_v6(dstip)) {
+      fprintf(stderr, "Bind ip and destination ip must be both v4 or v6 and can't be mixed!\n");
+      err = 1;
+    }
+  }
+
   if(! err) {
-    err = start_listener (inip, inpt, srcip, dstip, dstpt);
+    err = start_listener (inip, inpt, srcip, dstip, dstpt, pidfile);
   }
   
-  /* FIXME: add sighandler */
-
   if(srcip != NULL)
     free(srcip);
   if(dstip != NULL)
@@ -187,14 +204,16 @@ int main ( int argc, char* argv[] ) {
 
 void usage() {
   fprintf(stderr,
-	  "Usage: udpxd [-lbdvhV]\n\n"
+	  "Usage: udpxd [-lbdfpvhV]\n\n"
 	  "Options:\n"
-	  "--listen  -l <ip:port>     listen for incoming requests\n"
-	  "--bind    -b <ip>          bind ip used for outgoing requests\n"
-	  "--dest    -d <ip:port>     destination to forward requests to\n"
-	  "--help    -h -?            print help message\n"
-	  "--version -v               print program version\n"
-	  "--verbose -V               enable verbose logging\n\n"
+	  "--listen     -l <ip:port>     listen for incoming requests\n"
+	  "--bind       -b <ip>          bind ip used for outgoing requests\n"
+	  "--dest       -d <ip:port>     destination to forward requests to\n"
+	  "--foreground -f               don't fork into background\n"
+	  "--pidfile    -p <file>        pidfile, default: /var/run/udpxd.pid\n"
+	  "--help       -h -?            print help message\n"
+	  "--version    -v               print program version\n"
+	  "--verbose    -V               enable verbose logging\n\n"
 	  "Options -l and -d are mandatory.\n\n"
 	  "This is udpxd version %s.\n", UDPXD_VERSION
 	  );

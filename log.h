@@ -19,49 +19,21 @@
     You can contact me by mail: <tom AT vondein DOT org>.
 */
 
-#ifndef _HAVE_NET_H
-#define _HAVE_NET_H
+#ifndef _HAVE_LOG_H
+#define _HAVE_LOG_H
+
+#define _WITH_DPRINTF
 
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <stdint.h>
-#include <unistd.h>
-#include <time.h>
-#include <signal.h>
-#include <setjmp.h>
+#include <errno.h>
+#include <stdarg.h>
 #include <syslog.h>
 
-#include <sys/stat.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <sys/types.h>
-#include <sys/fcntl.h>
-#include <arpa/inet.h>
-
-
-#include "client.h"
-
-#define MAX_BUFFER_SIZE 65535
-
-extern client_t *clients;
 extern int VERBOSE;
 extern int FORKED;
 
-
-
-void handle_inside(int inside, host_t *listen_h, host_t *bind_h, host_t *dst_h);
-void handle_outside(int inside, int outside, host_t *outside_h);
-
-int main_loop(int listensocket, host_t *listen_h, host_t *bind_h, host_t *dst_h);
-int start_listener (char *inip, char *inpt, char *srcip, char *dstip, char *dstpt, char *pidfile);
-
-int fill_set(fd_set *fds);
-int get_sender(fd_set *fds);
-int bindsocket( host_t *sock_h);
-void int_handler(int  sig);
-void verb_prbind (host_t *bind_h);
-
-#define _IS_LINK_LOCAL(a) do { IN6_IS_ADDR_LINKLOCAL(a); } while(0)
+void verbose(const char * fmt, ...);
 
 #endif
