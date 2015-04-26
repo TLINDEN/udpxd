@@ -41,7 +41,7 @@ typedef uint8_t byte;
 #include "uthash.h"
 #include "host.h"
 
-#define MAXAGE         3600 /* seconds after which to close outgoing sockets and forget client src */
+#define MAXAGE         30 /* seconds after which to close outgoing sockets and forget client src */
 
 struct _client_t {
   int socket;               /* bind socket for outgoing traffic */
