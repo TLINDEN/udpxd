@@ -26,13 +26,6 @@
 
 
 
-char *ntoa(struct sockaddr_in *src) {
-  char *ip = malloc(32);
-  inet_ntop(AF_INET, (struct in_addr *)&src->sin_addr, ip, 32);
-  return ip;
-}
-
-
 /* called each time when the loop restarts to feed select() correctly */
 int fill_set(fd_set *fds) {
   int max = 0;
@@ -326,10 +319,6 @@ int main_loop(int listensocket, host_t *listen_h, host_t *bind_h, host_t *dst_h)
   
   /* we came here via signal handler,
      clean up */
-  client_t *current = NULL;
-  client_iter(clients, current) {
-    close(current->socket);
-  }
   close(listensocket);
   client_clean(1);
 
