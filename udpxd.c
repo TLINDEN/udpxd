@@ -26,7 +26,7 @@
 /* global client list */
 client_t *clients = NULL;
 int VERBOSE = 0;
-int FORKED = 1;
+int FORKED = 0;
 
 /* parse ip:port */
 int parse_ip(char *src, char *ip, char *pt) {
@@ -87,23 +87,47 @@ int parse_ip(char *src, char *ip, char *pt) {
 
 
 
+void usage() {
+  fprintf(stderr,
+	  "Usage: udpxd [-lbdfpvhV]\n\n"
+	  "Options:\n"
+	  "--listen     -l <ip:port>     listen for incoming requests\n"
+	  "--bind       -b <ip>          bind ip used for outgoing requests\n"
+	  "--to         -t <ip:port>     destination to forward requests to\n"
+	  "--daemon     -d               daemon mode, fork into background\n"
+	  "--pidfile    -p <file>        pidfile, default: /var/run/udpxd.pid\n"
+	  "--user       -u <user>        run as user (only in daemon mode)\n"
+	  "--chroot     -c <path>        chroot to <path> (only in daemon mode)\n"
+	  "--help       -h -?            print help message\n"
+	  "--version    -V               print program version\n"
+	  "--verbose    -v               enable verbose logging\n\n"
+	  "Options -l and -t are mandatory.\n\n"
+	  "This is udpxd version %s.\n", UDPXD_VERSION
+	  );
+}
+
+
 
 int main ( int argc, char* argv[] ) {
   int opt, err;
   char *inip, *inpt, *srcip, *dstip, *dstpt;
   char pidfile[MAX_BUFFER_SIZE];
+  char user[128];
+  char chroot[MAX_BUFFER_SIZE];
 
   err = 0;
   
   static struct option longopts[] = {
     { "listen",    required_argument, NULL,           'l' },
     { "bind",      required_argument, NULL,           'b' },
-    { "dest",      required_argument, NULL,           'd' },
-    { "version",   no_argument,       NULL,           'v' },
+    { "to",        required_argument, NULL,           't' },
+    { "version",   no_argument,       NULL,           'V' },
     { "help",      no_argument,       NULL,           'h' },
-    { "verbose",   no_argument,       NULL,           'V' },
-    { "foreground",no_argument,       NULL,           'f' },
+    { "verbose",   no_argument,       NULL,           'v' },
+    { "daemon",    no_argument,       NULL,           'd' },
     { "pidfile",   required_argument, NULL,           'p' },
+    { "user",      required_argument, NULL,           'u' },
+    { "chroot",    required_argument, NULL,           'c' },
   };
 
   if( argc < 2 ) {
@@ -112,23 +136,27 @@ int main ( int argc, char* argv[] ) {
   }
 
   srcip = dstip = inip = dstpt = inpt = NULL;
+
+  /* set defaults */
   strncpy(pidfile, "/var/run/udpxd.pid", 19);
+  strncpy(user, "nobody", 7);
+  strncpy(chroot, "/var/empty", 11);
   
-  while ((opt = getopt_long(argc, argv, "l:b:d:vfVh?", longopts, NULL)) != -1) {
+  while ((opt = getopt_long(argc, argv, "l:b:t:u:c:vdVh?", longopts, NULL)) != -1) {
     switch (opt) {
-    case 'v':
+    case 'V':
       fprintf(stderr, "This is %s version %s\n", argv[0], UDPXD_VERSION);
       return 1;
       break;
-    case 'f':
-      FORKED = 0;
+    case 'd':
+      FORKED = 1;
       break;
     case 'h':
     case '?':
       usage();
       return 1;
       break;
-    case 'V':
+    case 'v':
       VERBOSE = 1;
       break;
     case 'l':
@@ -139,7 +167,7 @@ int main ( int argc, char* argv[] ) {
 	err = 1;
       }
       break;
-    case 'd':
+    case 't':
       dstip = malloc(INET6_ADDRSTRLEN+1);
       dstpt = malloc(6);
       if (parse_ip(optarg, dstip, dstpt) != 0) {
@@ -158,6 +186,12 @@ int main ( int argc, char* argv[] ) {
     case 'p':
       strncpy(pidfile, optarg, strlen(optarg));
       break;
+    case 'u':
+      strncpy(user, optarg, strlen(optarg));
+      break;
+    case 'c':
+      strncpy(chroot, optarg, strlen(optarg));
+      break;
     default:
       usage();
       return 1;
@@ -172,7 +206,7 @@ int main ( int argc, char* argv[] ) {
   }
   
   if(dstip == NULL) {
-    fprintf(stderr, "-d parameter is required!\n");
+    fprintf(stderr, "-t parameter is required!\n");
     usage();
     err = 1;
   }
@@ -185,7 +219,7 @@ int main ( int argc, char* argv[] ) {
   }
 
   if(! err) {
-    err = start_listener (inip, inpt, srcip, dstip, dstpt, pidfile);
+    err = start_listener (inip, inpt, srcip, dstip, dstpt, pidfile, chroot, user);
   }
   
   if(srcip != NULL)
@@ -200,21 +234,4 @@ int main ( int argc, char* argv[] ) {
     free(dstpt);
 
   return err;
-}
-
-void usage() {
-  fprintf(stderr,
-	  "Usage: udpxd [-lbdfpvhV]\n\n"
-	  "Options:\n"
-	  "--listen     -l <ip:port>     listen for incoming requests\n"
-	  "--bind       -b <ip>          bind ip used for outgoing requests\n"
-	  "--dest       -d <ip:port>     destination to forward requests to\n"
-	  "--foreground -f               don't fork into background\n"
-	  "--pidfile    -p <file>        pidfile, default: /var/run/udpxd.pid\n"
-	  "--help       -h -?            print help message\n"
-	  "--version    -v               print program version\n"
-	  "--verbose    -V               enable verbose logging\n\n"
-	  "Options -l and -d are mandatory.\n\n"
-	  "This is udpxd version %s.\n", UDPXD_VERSION
-	  );
 }

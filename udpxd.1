@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "UDPXD 1"
-.TH UDPXD 1 "2015-04-26" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH UDPXD 1 "2015-04-27" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -139,12 +139,14 @@ udpxd \- A general purpose UDP relay/port forwarder/proxy
 \& Options:
 \& \-\-listen     \-l <ip:port>     listen for incoming requests
 \& \-\-bind       \-b <ip>          bind ip used for outgoing requests
-\& \-\-dest       \-d <ip:port>     destination to forward requests to
-\& \-\-foreground \-f               don\*(Aqt fork into background
+\& \-\-to         \-t <ip:port>     destination to forward requests to
+\& \-\-daemon     \-d               daemon mode, fork into background
 \& \-\-pidfile    \-p <file>        pidfile, default: /var/run/udpxd.pid
+\& \-\-user       \-u <user>        run as user (only in daemon mode)
+\& \-\-chroot     \-c <path>        chroot to <path> (only in daemon mode)
 \& \-\-help       \-h \-?            print help message
-\& \-\-version    \-v               print program version
-\& \-\-verbose    \-V               enable verbose logging
+\& \-\-version    \-V               print program version
+\& \-\-verbose    \-v               enable verbose logging
 .Ve
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
@@ -155,7 +157,7 @@ for outgoing packets.
 .PP
 It listens on the ip address and port specified with \fB\-l\fR
 and waits for incoming udp packets. If one arrives, it sends
-it to the destination specified with \fB\-d\fR. Responses will
+it to the destination specified with \fB\-t\fR. Responses will
 be sent back accordingly.
 .PP
 If \fB\-b\fR has not been specified, udpxd uses the operating
@@ -165,23 +167,25 @@ binds to the given ip address and uses this as the source
 address.
 .PP
 In any case, udpxd behaves like a proxy. The receiving end
-(\fB\-d\fR) only sees the source ip address of the outgoing
+(\fB\-t\fR) only sees the source ip address of the outgoing
 interface of the system running udpxd or the address specified
 with \fB\-b\fR.
 .PP
-The options \fB\-l\fR and \fB\-d\fR are mandatory.
+The options \fB\-l\fR and \fB\-t\fR are mandatory.
 .PP
-If the option \fB\-f\fR has not been specified, udpxd forks into
+If the option \fB\-d\fR has been specified, udpxd forks into
 the background and becomes a daemon. It writes it pidfile to
 \&\f(CW\*(C`/var/run/udpxd.pid\*(C'\fR, which can be changed with the \fB\-p\fR
-option.
+option. If started as root, it also drops privileges to the
+user \f(CW\*(C`nobody\*(C'\fR or the user specified with \fB\-u\fR and chroots
+to \f(CW\*(C`/var/empty\*(C'\fR or the directory specified with \fB\-c\fR.
 .PP
-\&\fBCaution: udpxd does not drop its privileges. If started as
-root, it will continue to run as root. This may change in the
-future.\fR
+\&\fBCaution: if not running in daemon mode, udpxd does not drop
+its privileges and will continue to run as root (if started as
+root).\fR
 .PP
 Udpxd supports ip version 4 and 6, it doesn't support hostnames,
-\&\-l, \-d and \-b must be ip addresses. In order to specify an ipv6
+\&\fB\-l\fR, \fB\-t\fR and \fB\-b\fR must be ip addresses. In order to specify an ipv6
 address and a port, use:
 .PP
 .Vb 1
@@ -216,7 +220,7 @@ an ntp server in network 192.168.1.0/24; and you dont operate a
 firewall, nat or routing on 'foo'. Run udpxd like this:
 .PP
 .Vb 1
-\& udpxd \-l 10.0.0.1:123 \-d 192.168.1.199:123
+\& udpxd \-l 10.0.0.1:123 \-t 192.168.1.199:123
 .Ve
 .PP
 Now, if a client with the source ip address 10.0.0.110 sends
@@ -244,7 +248,7 @@ In order to use 192.168.1.45 as the source ip address, use the
 \&\fB\-b\fR parameter:
 .PP
 .Vb 1
-\&  udpxd \-l 10.0.0.1:123 \-d 192.168.1.199:123 \-b 192.168.1.45
+\&  udpxd \-l 10.0.0.1:123 \-t 192.168.1.199:123 \-b 192.168.1.45
 .Ve
 .PP
 In this case for the client everything looks as before, but the
@@ -255,19 +259,18 @@ Here we listen on the ip v6 loopback address and forward traffic
 to another ip v6 destination address:
 .PP
 .Vb 1
-\& udpxd \-l [::1]:53 \-d [2001:4860:4860::8888]:53
+\& udpxd \-l [::1]:53 \-t [2001:4860:4860::8888]:53
 .Ve
 .PP
 Or, we could listen on an ip v4 address and forward to an ip v6
 address:
 .PP
 .Vb 1
-\& udpxd \-l 192.168.1.1:53 \-d [2001:4860:4860::8888]:53
+\& udpxd \-l 192.168.1.1:53 \-t [2001:4860:4860::8888]:53
 .Ve
 .SH "FILES"
 .IX Header "FILES"
-\&\fB/var/run/udpxd.pid\fR: created if running in daemon mode (\-f not
-specified).
+\&\fB/var/run/udpxd.pid\fR: created if running in daemon mode (\fB\-d\fR).
 .SH "BUGS"
 .IX Header "BUGS"
 In order to report a bug, unexpected behavior, feature requests

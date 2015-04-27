@@ -81,9 +81,14 @@ int bindsocket( host_t *sock_h) {
   return fd;
 }
 
-int start_listener (char *inip, char *inpt, char *srcip, char *dstip, char *dstpt, char *pidfile) {
-  host_t *listen_h, *dst_h, *bind_h;
-
+/*
+  returns:
+ -1: error in any case
+  0: parent not forked (fork disabled)
+  1: parent after successful fork
+  2: child after successful fork
+ */
+int daemonize(char *pidfile) {
   if(FORKED) {
     // fork
     pid_t pid, sid;
@@ -100,35 +105,101 @@ int start_listener (char *inip, char *inpt, char *srcip, char *dstip, char *dstp
       /* leave parent */
       if((fd = fopen(pidfile, "w")) == NULL) {
 	perror("failed to write pidfile");
-	return 1;
+	return -1;
       }
       else {
 	fprintf(fd, "%d\n", pid);
 	fclose(fd);
       }
-      return 0;
+      return 1;
     }
 
+    /* child */
 
     sid = setsid();
     if (sid < 0) {
       perror("set sid error");
       return 1;
     }
+  
+    umask(0);
+ 
+    openlog("udpxd", LOG_NOWAIT|LOG_PID, LOG_USER);
 
-    if ((chdir("/")) < 0) {
-      perror("failed to chdir to /");
+    return 2;
+  }
+
+  return 0;
+}
+
+int drop_privileges(char *user, char *chrootdir) {
+  struct passwd *pw = getpwnam(user);
+  uid_t me = getuid();
+    
+  if ((chdir("/")) < 0) {
+    perror("failed to chdir to /");
+    return 1;
+  }
+
+  if(me == 0) {
+    /* drop privileges */
+    if(chroot(chrootdir) != 0) {
+      perror("failed to chroot");
       return 1;
     }
     
-    umask(0);
-    close(STDIN_FILENO);
-    close(STDOUT_FILENO);
-    close(STDERR_FILENO);
+    if(pw == NULL) {
+      perror("user not found");
+      return 1;
+    }
 
-    openlog("udpxd", LOG_NOWAIT|LOG_PID, LOG_USER);
+    if(setegid(pw->pw_gid) != 0) {
+      perror("could not set egid");
+      return 1;
+    }
+
+    if(setgid(pw->pw_gid) != 0) {
+      perror("could not set gid");
+      return 1;
+    }
+
+    if(setuid(pw->pw_uid) != 0) {
+      perror("could not set uid");
+      return 1;
+    }
+
+    if(seteuid(pw->pw_uid) != 0) {
+      perror("could not set euid");
+      return 1;
+    }
+
+    if (setuid(0) != -1) {
+      fprintf(stderr, "error, managed to regain root privileges after dropping them!\n");
+      return 1;
+    }
   }
 
+  return 0;
+}
+
+int start_listener (char *inip, char *inpt, char *srcip, char *dstip,
+		    char *dstpt, char *pidfile, char *chrootdir, char *user) {
+  host_t *listen_h, *dst_h, *bind_h;
+
+  int dm = daemonize(pidfile);
+  switch(dm) {
+  case -1:
+    return 1; /* parent, fork error */
+    break;
+  case 0:
+    break;    /* parent, not forking */
+  case 1:
+    return 0; /* parent, fork ok, leave */
+    break;
+  case 2:
+    break;    /* child, fork ok, continue */
+  }
+  
   listen_h = get_host(inip, atoi(inpt), NULL, NULL);
   dst_h    = get_host(dstip, atoi(dstpt), NULL, NULL);
   bind_h   = NULL;
@@ -156,7 +227,18 @@ int start_listener (char *inip, char *inpt, char *srcip, char *dstip, char *dstp
     else
       verbose("\n");
   }
+
+  if(drop_privileges(user, chrootdir) != 0) {
+    host_clean(bind_h);
+    host_clean(listen_h);
+    host_clean(dst_h);
+    return 1;
+  }
   
+  close(STDIN_FILENO);
+  close(STDOUT_FILENO);
+  close(STDERR_FILENO);
+    
   main_loop(listen, listen_h, bind_h, dst_h);
 
   host_clean(bind_h);

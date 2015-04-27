@@ -36,7 +36,7 @@
 #include <sys/fcntl.h>
 #include <arpa/inet.h>
 
-#define UDPXD_VERSION "0.0.2"
+#define UDPXD_VERSION "0.0.3"
 
 
 void usage();

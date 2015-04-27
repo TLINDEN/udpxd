@@ -9,12 +9,14 @@ udpxd - A general purpose UDP relay/port forwarder/proxy
  Options:
  --listen     -l <ip:port>     listen for incoming requests
  --bind       -b <ip>          bind ip used for outgoing requests
- --dest       -d <ip:port>     destination to forward requests to
- --foreground -f               don't fork into background
+ --to         -t <ip:port>     destination to forward requests to
+ --daemon     -d               daemon mode, fork into background
  --pidfile    -p <file>        pidfile, default: /var/run/udpxd.pid
+ --user       -u <user>        run as user (only in daemon mode)
+ --chroot     -c <path>        chroot to <path> (only in daemon mode)
  --help       -h -?            print help message
- --version    -v               print program version
- --verbose    -V               enable verbose logging
+ --version    -V               print program version
+ --verbose    -v               enable verbose logging
 
 =head1 DESCRIPTION
 
@@ -25,7 +27,7 @@ for outgoing packets.
 
 It listens on the ip address and port specified with B<-l>
 and waits for incoming udp packets. If one arrives, it sends
-it to the destination specified with B<-d>. Responses will
+it to the destination specified with B<-t>. Responses will
 be sent back accordingly.
 
 If B<-b> has not been specified, udpxd uses the operating
@@ -35,23 +37,27 @@ binds to the given ip address and uses this as the source
 address.
 
 In any case, udpxd behaves like a proxy. The receiving end
-(B<-d>) only sees the source ip address of the outgoing
+(B<-t>) only sees the source ip address of the outgoing
 interface of the system running udpxd or the address specified
 with B<-b>.
 
-The options B<-l> and B<-d> are mandatory.
+The options B<-l> and B<-t> are mandatory.
 
-If the option B<-f> has not been specified, udpxd forks into
+If the option B<-d> has been specified, udpxd forks into
 the background and becomes a daemon. It writes it pidfile to
 C</var/run/udpxd.pid>, which can be changed with the B<-p>
-option.
+option. If started as root, it also drops privileges to the
+user C<nobody> or the user specified with B<-u> and chroots
+to C</var/empty> or the directory specified with B<-c>. udpxd
+will log to syslog facility user.info if B<-v> is specified and
+if running in daemon mode.
 
-B<Caution: udpxd does not drop its privileges. If started as
-root, it will continue to run as root. This may change in the
-future.>
+B<Caution: if not running in daemon mode, udpxd does not drop
+its privileges and will continue to run as root (if started as
+root).>
 
 Udpxd supports ip version 4 and 6, it doesn't support hostnames,
--l, -d and -b must be ip addresses. In order to specify an ipv6
+B<-l>, B<-t> and B<-b> must be ip addresses. In order to specify an ipv6
 address and a port, use:
 
  -l [::1]:53
@@ -80,7 +86,7 @@ And let's say, you have a client in network 10.0.0.0/24 who whiches to reach
 an ntp server in network 192.168.1.0/24; and you dont operate a
 firewall, nat or routing on 'foo'. Run udpxd like this:
 
- udpxd -l 10.0.0.1:123 -d 192.168.1.199:123
+ udpxd -l 10.0.0.1:123 -t 192.168.1.199:123
 
 Now, if a client with the source ip address 10.0.0.110 sends
 a ntp request to 10.0.0.1:123, udpxd will forward that
@@ -104,7 +110,7 @@ of the interface for outgoing packets.
 In order to use 192.168.1.45 as the source ip address, use the
 B<-b> parameter:
 
-  udpxd -l 10.0.0.1:123 -d 192.168.1.199:123 -b 192.168.1.45
+  udpxd -l 10.0.0.1:123 -t 192.168.1.199:123 -b 192.168.1.45
 
 In this case for the client everything looks as before, but the
 ntp server on the other end will see ntp requests coming from
@@ -113,17 +119,16 @@ ntp server on the other end will see ntp requests coming from
 Here we listen on the ip v6 loopback address and forward traffic
 to another ip v6 destination address:
 
- udpxd -l [::1]:53 -d [2001:4860:4860::8888]:53
+ udpxd -l [::1]:53 -t [2001:4860:4860::8888]:53
 
 Or, we could listen on an ip v4 address and forward to an ip v6
 address:
 
- udpxd -l 192.168.1.1:53 -d [2001:4860:4860::8888]:53
+ udpxd -l 192.168.1.1:53 -t [2001:4860:4860::8888]:53
 
 =head1 FILES
 
-B</var/run/udpxd.pid>: created if running in daemon mode (-f not
-specified).
+B</var/run/udpxd.pid>: created if running in daemon mode (B<-d>).
 
 =head1 BUGS
 

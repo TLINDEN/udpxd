@@ -25,8 +25,8 @@ install:
 
 build_script:
   - '%CYG_BASH% -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; make"'
-  - '%CYG_BASH% -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; cygstart --hide ./udpxd -l 127.0.0.1:53 -d 8.8.8.8:53 -f"'
-  - '%CYG_BASH% -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; cygstart --hide ./udpxd -l [::1]:53 -d 8.8.8.8:53 -f"'
+  - '%CYG_BASH% -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; cygstart --hide ./udpxd -l 127.0.0.1:53 -t 8.8.8.8:53"'
+  - '%CYG_BASH% -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; cygstart --hide ./udpxd -l [::1]:53 -t 8.8.8.8:53"'
   - '%CYG_BASH% -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; dig www.google.de soa @127.0.0.1"'
   - '%CYG_BASH% -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; dig www.google.de soa @::1"'
 

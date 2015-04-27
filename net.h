@@ -38,6 +38,7 @@
 #include <sys/types.h>
 #include <sys/fcntl.h>
 #include <arpa/inet.h>
+#include <pwd.h>
 
 
 #include "client.h"
@@ -54,7 +55,10 @@ void handle_inside(int inside, host_t *listen_h, host_t *bind_h, host_t *dst_h);
 void handle_outside(int inside, int outside, host_t *outside_h);
 
 int main_loop(int listensocket, host_t *listen_h, host_t *bind_h, host_t *dst_h);
-int start_listener (char *inip, char *inpt, char *srcip, char *dstip, char *dstpt, char *pidfile);
+int start_listener (char *inip, char *inpt, char *srcip, char *dstip,
+		    char *dstpt, char *pidfile, char *chrootdir, char *user);
+int daemonize(char *pidfile);
+int drop_privileges(char *user, char *chrootdir);
 
 int fill_set(fd_set *fds);
 int get_sender(fd_set *fds);
