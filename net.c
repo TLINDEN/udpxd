@@ -136,6 +136,9 @@ int drop_privileges(char *user, char *chrootdir) {
   struct passwd *pw = getpwnam(user);
   uid_t me = getuid();
     
+  if(!FORKED)
+    return 0;
+
   if ((chdir("/")) < 0) {
     perror("failed to chdir to /");
     return 1;
