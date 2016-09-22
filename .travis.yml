@@ -11,7 +11,14 @@ script:
  - make
  - sudo make install
  - sudo udpxd -l 127.0.0.1:53 -t 8.8.8.8:53 &
- - sudo udpxd -l [::1]:53 -t [2001:4860:4860::8888]:53 &
  - dig +nocmd +noall +answer google.de a @127.0.0.1
- - dig +nocmd +noall +answer google.de a @::1
  - sudo killall udpxd
+
+#
+# ipv6 not supported anymore since Travis-ci moved to
+# GCE: https://blog.travis-ci.com/2015-11-27-moving-to-a-more-elastic-future
+# whatever this might have to do with "future".. However, Appveyor still
+# supports it, so I suspect, disabling it here is probably ok. 
+#
+# - dig +nocmd +noall +answer google.de a @::1
+# - sudo udpxd -l [::1]:53 -t [2001:4860:4860::8888]:53 &
