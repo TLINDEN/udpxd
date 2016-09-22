@@ -1,7 +1,7 @@
 /*
     This file is part of udpxd.
 
-    Copyright (C) 2015 T.v.Dein.
+    Copyright (C) 2015-2016 T.v.Dein.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -43,20 +43,20 @@ host_t *get_host(char *ip, int port, struct sockaddr_in *v4, struct sockaddr_in6
 
       unsigned int scope = get_v6_scope(ip);
       if (is_linklocal((struct in6_addr*)&tmp->sin6_addr))
-	tmp->sin6_scope_id = scope;
+        tmp->sin6_scope_id = scope;
       else
-	tmp->sin6_scope_id = 0;
+        tmp->sin6_scope_id = 0;
 
       host->is_v6 = 1;
       host->sock  = (struct sockaddr*)tmp;
       host->size = sizeof(struct sockaddr_in6);
       if(tmp->sin6_scope_id != 0) {
-	host->ip = malloc(INET6_ADDRSTRLEN + 9); /* plus [ % ] \0 , scope*/
-	sprintf(host->ip, "[%s%%%d]", ip, scope);
+        host->ip = malloc(INET6_ADDRSTRLEN + 9); /* plus [ % ] \0 , scope*/
+        sprintf(host->ip, "[%s%%%d]", ip, scope);
       }
       else {
-	host->ip = malloc(INET6_ADDRSTRLEN + 3); /* plus [ ] \0 */
-	sprintf(host->ip, "[%s]", ip);
+        host->ip = malloc(INET6_ADDRSTRLEN + 3); /* plus [ ] \0 */
+        sprintf(host->ip, "[%s]", ip);
       }
     }
     else {

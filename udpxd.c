@@ -1,7 +1,7 @@
 /*
     This file is part of udpxd.
 
-    Copyright (C) 2015 T.v.Dein.
+    Copyright (C) 2015-2016 T.v.Dein.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -71,8 +71,8 @@ int parse_ip(char *src, char *ip, char *pt) {
     }
     else {
       if(atoi(ptr) > 65535) {
-	fprintf(stderr, "maximum port number possible: 65535!\n");
-	return 1;
+        fprintf(stderr, "maximum port number possible: 65535!\n");
+        return 1;
       }
       strncpy(pt, ptr, strlen(ptr)+1);
     }
@@ -89,21 +89,21 @@ int parse_ip(char *src, char *ip, char *pt) {
 
 void usage() {
   fprintf(stderr,
-	  "Usage: udpxd [-lbdfpvhV]\n\n"
-	  "Options:\n"
-	  "--listen     -l <ip:port>     listen for incoming requests\n"
-	  "--bind       -b <ip>          bind ip used for outgoing requests\n"
-	  "--to         -t <ip:port>     destination to forward requests to\n"
-	  "--daemon     -d               daemon mode, fork into background\n"
-	  "--pidfile    -p <file>        pidfile, default: /var/run/udpxd.pid\n"
-	  "--user       -u <user>        run as user (only in daemon mode)\n"
-	  "--chroot     -c <path>        chroot to <path> (only in daemon mode)\n"
-	  "--help       -h -?            print help message\n"
-	  "--version    -V               print program version\n"
-	  "--verbose    -v               enable verbose logging\n\n"
-	  "Options -l and -t are mandatory.\n\n"
-	  "This is udpxd version %s.\n", UDPXD_VERSION
-	  );
+          "Usage: udpxd [-lbdfpvhV]\n\n"
+          "Options:\n"
+          "--listen     -l <ip:port>     listen for incoming requests\n"
+          "--bind       -b <ip>          bind ip used for outgoing requests\n"
+          "--to         -t <ip:port>     destination to forward requests to\n"
+          "--daemon     -d               daemon mode, fork into background\n"
+          "--pidfile    -p <file>        pidfile, default: /var/run/udpxd.pid\n"
+          "--user       -u <user>        run as user (only in daemon mode)\n"
+          "--chroot     -c <path>        chroot to <path> (only in daemon mode)\n"
+          "--help       -h -?            print help message\n"
+          "--version    -V               print program version\n"
+          "--verbose    -v               enable verbose logging\n\n"
+          "Options -l and -t are mandatory.\n\n"
+          "This is udpxd version %s.\n", UDPXD_VERSION
+          );
 }
 
 
@@ -163,22 +163,22 @@ int main ( int argc, char* argv[] ) {
       inip  = malloc(INET6_ADDRSTRLEN+1);
       inpt  = malloc(6);
       if (parse_ip(optarg, inip, inpt) != 0) {
-	fprintf(stderr, "Parameter -l has the format <ip-address:port>!\n");
-	err = 1;
+        fprintf(stderr, "Parameter -l has the format <ip-address:port>!\n");
+        err = 1;
       }
       break;
     case 't':
       dstip = malloc(INET6_ADDRSTRLEN+1);
       dstpt = malloc(6);
       if (parse_ip(optarg, dstip, dstpt) != 0) {
-	fprintf(stderr, "Parameter -d has the format <ip-address:port>!\n");
-	err = 1;
+        fprintf(stderr, "Parameter -d has the format <ip-address:port>!\n");
+        err = 1;
       }
       break;
     case 'b':
       if(strlen(optarg) > INET6_ADDRSTRLEN) {
-	fprintf(stderr, "Bind ip address is too long!\n");
-	err = 1;
+        fprintf(stderr, "Bind ip address is too long!\n");
+        err = 1;
       }
       srcip = malloc(INET6_ADDRSTRLEN+1);
       strncpy(srcip, optarg, strlen(optarg));

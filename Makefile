@@ -1,7 +1,7 @@
 #
 #    This file is part of udpxd.
 #
-#    Copyright (C) 2015 T.v.Dein.
+#    Copyright (C) 2015-2016 T.v.Dein.
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by

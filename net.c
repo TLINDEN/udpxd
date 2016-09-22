@@ -1,7 +1,7 @@
 /*
     This file is part of udpxd.
 
-    Copyright (C) 2015 T.v.Dein.
+    Copyright (C) 2015-2016 T.v.Dein.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -34,7 +34,7 @@ int fill_set(fd_set *fds) {
   client_iter(clients, current) {
     if (current->socket < (int)FD_SETSIZE) {
       if (current->socket > max)
-	max = current->socket;
+        max = current->socket;
       FD_SET(current->socket, fds);
     }
     else {
@@ -104,12 +104,12 @@ int daemonize(char *pidfile) {
     if (pid > 0) {
       /* leave parent */
       if((fd = fopen(pidfile, "w")) == NULL) {
-	perror("failed to write pidfile");
-	return -1;
+        perror("failed to write pidfile");
+        return -1;
       }
       else {
-	fprintf(fd, "%d\n", pid);
-	fclose(fd);
+        fprintf(fd, "%d\n", pid);
+        fclose(fd);
       }
       return 1;
     }
@@ -186,7 +186,7 @@ int drop_privileges(char *user, char *chrootdir) {
 }
 
 int start_listener (char *inip, char *inpt, char *srcip, char *dstip,
-		    char *dstpt, char *pidfile, char *chrootdir, char *user) {
+                    char *dstpt, char *pidfile, char *chrootdir, char *user) {
   host_t *listen_h, *dst_h, *bind_h;
 
   int dm = daemonize(pidfile);
@@ -224,7 +224,7 @@ int start_listener (char *inip, char *inpt, char *srcip, char *dstip,
 
   if(VERBOSE) {
     verbose("Listening on %s:%s, forwarding to %s:%s",
-	    listen_h->ip, inpt, dst_h->ip, dstpt);
+            listen_h->ip, inpt, dst_h->ip, dstpt);
     if(srcip != NULL)
       verbose(", binding to %s\n", bind_h->ip);
     else
@@ -266,7 +266,7 @@ void handle_inside(int inside, host_t *listen_h, host_t *bind_h, host_t *dst_h) 
   src = malloc(size);
   
   len = recvfrom( inside, buffer, sizeof( buffer ), 0,
-		  (struct sockaddr*)src, (socklen_t *)&size );
+                  (struct sockaddr*)src, (socklen_t *)&size );
 
   if(listen_h->is_v6)
     src_h = get_host(NULL, 0, NULL, (struct sockaddr_in6 *)src);
@@ -281,49 +281,49 @@ void handle_inside(int inside, host_t *listen_h, host_t *bind_h, host_t *dst_h) 
     if(client != NULL) {
       /* yes, we know it, send req out via existing bind socket */
       verbose("Client %s:%d is known, forwarding %d bytes to %s:%d ",
-	      src_h->ip, src_h->port, len, dst_h->ip, dst_h->port);
+              src_h->ip, src_h->port, len, dst_h->ip, dst_h->port);
       verb_prbind(bind_h);
 
       if(sendto(client->socket, buffer, len, 0, (struct sockaddr*)dst_h->sock, dst_h->size) < 0) {
-	fprintf(stderr, "unable to forward to %s:%d\n", dst_h->ip, dst_h->port);
-	perror(NULL);
+        fprintf(stderr, "unable to forward to %s:%d\n", dst_h->ip, dst_h->port);
+        perror(NULL);
       }
       else {
-	client_seen(client);
+        client_seen(client);
       }
     }
     else {
       /* unknown client, open new out socket */
-	verbose("Client %s:%d is unknown, forwarding %d bytes to %s:%d ",
-		src_h->ip, src_h->port, len, dst_h->ip, dst_h->port);
-	verb_prbind(bind_h);
+      verbose("Client %s:%d is unknown, forwarding %d bytes to %s:%d ",
+              src_h->ip, src_h->port, len, dst_h->ip, dst_h->port);
+      verb_prbind(bind_h);
 
       output = bindsocket(bind_h);
       
       /* send req out */
       if(sendto(output, buffer, len, 0, (struct sockaddr*)dst_h->sock, dst_h->size) < 0) {
-	fprintf(stderr, "unable to forward to %s:%d\n", dst_h->ip, dst_h->port);
-	perror(NULL);
+        fprintf(stderr, "unable to forward to %s:%d\n", dst_h->ip, dst_h->port);
+        perror(NULL);
       }
       else {
-	size = listen_h->size;
-	host_t *ret_h;
-	if(listen_h->is_v6) {
-	  struct sockaddr_in6 *ret = malloc(size);
-	  getsockname(output, (struct sockaddr*)ret, (socklen_t *)&size);
-	  ret_h = get_host(NULL, 0, NULL, ret);
-	  free(ret);
-	  client = client_new(output, src_h, ret_h);
-	}
-	else {
-	  struct sockaddr_in *ret = malloc(size);	  
-	  getsockname(output, (struct sockaddr*)ret, (socklen_t *)&size);
-	  ret_h = get_host(NULL, 0, ret, NULL);
-	  free(ret);
-	  client = client_new(output, src_h, ret_h);
-	}
-
-	client_add(client);
+        size = listen_h->size;
+        host_t *ret_h;
+        if(listen_h->is_v6) {
+          struct sockaddr_in6 *ret = malloc(size);
+          getsockname(output, (struct sockaddr*)ret, (socklen_t *)&size);
+          ret_h = get_host(NULL, 0, NULL, ret);
+          free(ret);
+          client = client_new(output, src_h, ret_h);
+        }
+        else {
+          struct sockaddr_in *ret = malloc(size);
+          getsockname(output, (struct sockaddr*)ret, (socklen_t *)&size);
+          ret_h = get_host(NULL, 0, ret, NULL);
+          free(ret);
+          client = client_new(output, src_h, ret_h);
+        }
+        
+        client_add(client);
       }
     }
   }
@@ -349,9 +349,9 @@ void handle_outside(int inside, int outside, host_t *outside_h) {
       /* yes, we know it */
       /* FIXME: check src vs. client->src ? */
       if(sendto(inside, buffer, len, 0,
-		(struct sockaddr*)client->src->sock, client->src->size) < 0) {
-	perror("unable to send back to client"); /* FIXME: add src+port */
-	client_close(client);
+                (struct sockaddr*)client->src->sock, client->src->size) < 0) {
+        perror("unable to send back to client"); /* FIXME: add src+port */
+        client_close(client);
       }
     }
     else {
@@ -388,8 +388,8 @@ int main_loop(int listensocket, host_t *listen_h, host_t *bind_h, host_t *dst_h)
     select(max + 1, &fds, NULL, NULL, NULL);
 
     if (FD_ISSET(listensocket, &fds)) {
-      /* incoming client on the inside, get src, bind output fd, add to list
-	 if known, otherwise just handle it  */
+      /* incoming client on  the inside, get src, bind  output fd, add
+         to list if known, otherwise just handle it */
       handle_inside(listensocket, listen_h, bind_h, dst_h);
     }
     else {

@@ -1,7 +1,7 @@
 /*
     This file is part of udpxd.
 
-    Copyright (C) 2015 T.v.Dein.
+    Copyright (C) 2015-2016 T.v.Dein.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -74,7 +74,7 @@ void client_clean(int asap) {
     diff = now - current->lastseen;
     if(diff >= MAXAGE || asap) {
       verbose("closing socket %s:%d for client %s:%d (aged out after %d seconds)\n",
-	      current->src->ip, current->src->port, current->dst->ip, current->dst->port, MAXAGE);
+              current->src->ip, current->src->port, current->dst->ip, current->dst->port, MAXAGE);
       client_close(current);
     }
   }
