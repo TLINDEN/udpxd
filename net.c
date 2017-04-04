@@ -363,6 +363,7 @@ void handle_outside(int inside, int outside, host_t *outside_h) {
   }
 }
 
+/* stores system specific information, used by longjmp(), see below */
 jmp_buf  JumpBuffer;
 
 /* runs forever, handles incoming requests on the inside and answers on the outside */
@@ -370,10 +371,19 @@ int main_loop(int listensocket, host_t *listen_h, host_t *bind_h, host_t *dst_h)
   int max, sender;
   fd_set fds;
 
+  /* we want to properly tear  down running sessions when interrupted,
+     int_handler() will be called on INT or TERM signals */
   signal(SIGINT, int_handler);
   signal(SIGTERM, int_handler);
 
   for(;;) {
+    /*
+      Normally returns 0, that is, if it's the first instruction after
+      entering the loop.  However, it  will return 1, when called from
+      longjmp(), which will be called by int_handler() if a SIGINT- or
+      TERM  arrives.  In  that  case  we leave  the  loop,  tear  down
+      everything and exit.
+     */
     if (setjmp(JumpBuffer) == 1) {
       break;
     }
@@ -402,14 +412,17 @@ int main_loop(int listensocket, host_t *listen_h, host_t *bind_h, host_t *dst_h)
     client_clean(0);
   }
   
-  /* we came here via signal handler,
-     clean up */
+  /* we came here via signal handler, clean up */
   close(listensocket);
   client_clean(1);
 
   return 0;
 }
 
+/*
+  Handle SIGINT- and TERM, call  longjmp(), which jumps right into the
+  main loop, where it causes the loop to be left.
+ */
 void int_handler(int  sig) {
   signal(sig, SIG_IGN);
   longjmp(JumpBuffer, 1);
