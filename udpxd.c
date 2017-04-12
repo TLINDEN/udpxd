@@ -176,21 +176,27 @@ int main ( int argc, char* argv[] ) {
       }
       break;
     case 'b':
+      srcip = malloc(INET6_ADDRSTRLEN+1);
       if(strlen(optarg) > INET6_ADDRSTRLEN) {
         fprintf(stderr, "Bind ip address is too long!\n");
         err = 1;
       }
-      srcip = malloc(INET6_ADDRSTRLEN+1);
-      strncpy(srcip, optarg, strlen(optarg));
+      else {
+        strncpy(srcip, optarg, INET6_ADDRSTRLEN);
+        srcip[INET6_ADDRSTRLEN-1] = '\0';
+      }
       break;
     case 'p':
-      strncpy(pidfile, optarg, strlen(optarg));
+      strncpy(pidfile, optarg, MAX_BUFFER_SIZE);
+      pidfile[MAX_BUFFER_SIZE-1] = '\0';
       break;
     case 'u':
-      strncpy(user, optarg, strlen(optarg));
+      strncpy(user, optarg, 128);
+      user[128-1] = '\0';
       break;
     case 'c':
-      strncpy(chroot, optarg, strlen(optarg));
+      strncpy(chroot, optarg, MAX_BUFFER_SIZE);
+      chroot[MAX_BUFFER_SIZE-1] = '\0';
       break;
     default:
       usage();
