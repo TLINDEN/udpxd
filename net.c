@@ -68,7 +68,7 @@ int bindsocket( host_t *sock_h) {
     fd = socket( PF_INET, SOCK_DGRAM, IPPROTO_UDP );
   }
 
-  if( -1 == bind( fd, (struct sockaddr*)sock_h->sock, sock_h->size ) ) {
+  if( ! ( fd >= 0 && -1 != bind( fd, (struct sockaddr*)sock_h->sock, sock_h->size ) ) ) {
     err = 1;
   }
 
@@ -270,14 +270,11 @@ void handle_inside(int inside, host_t *listen_h, host_t *bind_h, host_t *dst_h) 
   len = recvfrom( inside, buffer, sizeof( buffer ), 0,
                   (struct sockaddr*)src, (socklen_t *)&size );
 
-  if(listen_h->is_v6)
-    src_h = get_host(NULL, 0, NULL, (struct sockaddr_in6 *)src);
-  else
-    src_h = get_host(NULL, 0, (struct sockaddr_in *)src, NULL);
-
-  free(src);
-
   if(len > 0) {
+    if(listen_h->is_v6)
+      src_h = get_host(NULL, 0, NULL, (struct sockaddr_in6 *)src);
+    else
+      src_h = get_host(NULL, 0, (struct sockaddr_in *)src, NULL);
     /* do we know it ? */
     client = client_find_src(src_h);
     if(client != NULL) {
@@ -293,6 +290,7 @@ void handle_inside(int inside, host_t *listen_h, host_t *bind_h, host_t *dst_h) 
       else {
         client_seen(client);
       }
+      host_clean(src_h);
     }
     else {
       /* unknown client, open new out socket */
@@ -301,34 +299,39 @@ void handle_inside(int inside, host_t *listen_h, host_t *bind_h, host_t *dst_h) 
       verb_prbind(bind_h);
 
       output = bindsocket(bind_h);
-      
-      /* send req out */
-      if(sendto(output, buffer, len, 0, (struct sockaddr*)dst_h->sock, dst_h->size) < 0) {
-        fprintf(stderr, "unable to forward to %s:%d\n", dst_h->ip, dst_h->port);
-        perror(NULL);
-      }
-      else {
-        size = listen_h->size;
-        host_t *ret_h;
-        if(listen_h->is_v6) {
-          struct sockaddr_in6 *ret = malloc(size);
-          getsockname(output, (struct sockaddr*)ret, (socklen_t *)&size);
-          ret_h = get_host(NULL, 0, NULL, ret);
-          free(ret);
-          client = client_new(output, src_h, ret_h);
+      if (output >= 0) {
+        /* send req out */
+        if(sendto(output, buffer, len, 0, (struct sockaddr*)dst_h->sock, dst_h->size) < 0) {
+            fprintf(stderr, "unable to forward to %s:%d\n", dst_h->ip, dst_h->port);
+            perror(NULL);
         }
         else {
-          struct sockaddr_in *ret = malloc(size);
-          getsockname(output, (struct sockaddr*)ret, (socklen_t *)&size);
-          ret_h = get_host(NULL, 0, ret, NULL);
-          free(ret);
-          client = client_new(output, src_h, ret_h);
+          size = listen_h->size;
+          host_t *ret_h;
+          if(listen_h->is_v6) {
+            struct sockaddr_in6 *ret = malloc(size);
+            getsockname(output, (struct sockaddr*)ret, (socklen_t *)&size);
+            ret_h = get_host(NULL, 0, NULL, ret);
+            free(ret);
+            client = client_new(output, src_h, ret_h);
+          }
+          else {
+            struct sockaddr_in *ret = malloc(size);
+            getsockname(output, (struct sockaddr*)ret, (socklen_t *)&size);
+            ret_h = get_host(NULL, 0, ret, NULL);
+            free(ret);
+            client = client_new(output, src_h, ret_h);
+          }
+
+          client_add(client);
         }
-        
-        client_add(client);
+      }
+      else {
+        host_clean(src_h);
       }
     }
   }
+  free(src);
 }
 
 /* handle answer from the outside */
