@@ -211,7 +211,7 @@ int main ( int argc, char* argv[] ) {
     err = 1;
   }
 
-  if(srcip != NULL) {
+  if(srcip != NULL && dstip != NULL) {
     if(is_v6(srcip) != is_v6(dstip)) {
       fprintf(stderr, "Bind ip and destination ip must be both v4 or v6 and can't be mixed!\n");
       err = 1;
