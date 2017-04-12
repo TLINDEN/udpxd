@@ -237,10 +237,12 @@ int start_listener (char *inip, char *inpt, char *srcip, char *dstip,
     host_clean(dst_h);
     return 1;
   }
-  
-  close(STDIN_FILENO);
-  close(STDOUT_FILENO);
-  close(STDERR_FILENO);
+
+  if (dm) {
+    close(STDIN_FILENO);
+    close(STDOUT_FILENO);
+    close(STDERR_FILENO);
+  }
     
   main_loop(listen, listen_h, bind_h, dst_h);
 
