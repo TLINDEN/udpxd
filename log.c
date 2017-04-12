@@ -30,7 +30,6 @@ void verbose(const char * fmt, ...) {
     va_start(ap, fmt);
 
     if(vasprintf(&msg, fmt, ap) >= 0) {
-      va_end(ap);
 
       if(FORKED) {
         syslog(LOG_INFO, "%s", msg);
@@ -38,6 +37,8 @@ void verbose(const char * fmt, ...) {
       else {
         fprintf(stderr, "%s", msg);
       }
+      free(msg);
+      va_end(ap);
     }
     else {
       fprintf(stderr, "Fatal: could not store log message!\n");
