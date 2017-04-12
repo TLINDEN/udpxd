@@ -185,7 +185,7 @@ int drop_privileges(char *user, char *chrootdir) {
   return 0;
 }
 
-int start_listener (char *inip, char *inpt, char *srcip, char *dstip,
+int start_listener (char *inip, char *inpt, char *srcip, char *srcpt, char *dstip,
                     char *dstpt, char *pidfile, char *chrootdir, char *user) {
   host_t *listen_h, *dst_h, *bind_h;
 
@@ -208,7 +208,7 @@ int start_listener (char *inip, char *inpt, char *srcip, char *dstip,
   bind_h   = NULL;
 
   if(srcip != NULL) {
-    bind_h   = get_host(srcip, 0, NULL, NULL);
+    bind_h   = get_host(srcip, atoi(srcpt), NULL, NULL);
   }
   else {
     if(dst_h->is_v6)
@@ -298,6 +298,8 @@ void handle_inside(int inside, host_t *listen_h, host_t *bind_h, host_t *dst_h) 
               src_h->ip, src_h->port, len, dst_h->ip, dst_h->port);
       verb_prbind(bind_h);
 
+      if (bind_h->port)
+        client_clean(1);
       output = bindsocket(bind_h);
       if (output >= 0) {
         /* send req out */
