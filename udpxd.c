@@ -92,7 +92,8 @@ void usage() {
           "Usage: udpxd [-lbdfpvhV]\n\n"
           "Options:\n"
           "--listen     -l <ip:port>     listen for incoming requests\n"
-          "--bind       -b <ip>          bind ip used for outgoing requests\n"
+          "--bind       -b <ip[:port]>   bind ip used for outgoing requests\n"
+          "                              specify port for promiscuous mode\n"
           "--to         -t <ip:port>     destination to forward requests to\n"
           "--daemon     -d               daemon mode, fork into background\n"
           "--pidfile    -p <file>        pidfile, default: /var/run/udpxd.pid\n"
@@ -110,7 +111,7 @@ void usage() {
 
 int main ( int argc, char* argv[] ) {
   int opt, err;
-  char *inip, *inpt, *srcip, *dstip, *dstpt;
+  char *inip, *inpt, *srcip, *srcpt, *dstip, *dstpt;
   char pidfile[MAX_BUFFER_SIZE];
   char user[128];
   char chroot[MAX_BUFFER_SIZE];
@@ -135,7 +136,7 @@ int main ( int argc, char* argv[] ) {
     return 1;
   }
 
-  srcip = dstip = inip = dstpt = inpt = NULL;
+  srcip = srcpt = dstip = inip = dstpt = inpt = NULL;
 
   /* set defaults */
   strncpy(pidfile, "/var/run/udpxd.pid", 19);
@@ -171,19 +172,23 @@ int main ( int argc, char* argv[] ) {
       dstip = malloc(INET6_ADDRSTRLEN+1);
       dstpt = malloc(6);
       if (parse_ip(optarg, dstip, dstpt) != 0) {
-        fprintf(stderr, "Parameter -d has the format <ip-address:port>!\n");
+        fprintf(stderr, "Parameter -t has the format <ip-address:port>!\n");
         err = 1;
       }
       break;
     case 'b':
-      srcip = malloc(INET6_ADDRSTRLEN+1);
-      if(strlen(optarg) > INET6_ADDRSTRLEN) {
+      srcip = malloc(INET6_ADDRSTRLEN+1+5); // +5 is for port
+      srcpt = malloc(6);
+      if(strlen(optarg) > INET6_ADDRSTRLEN+5) {
         fprintf(stderr, "Bind ip address is too long!\n");
         err = 1;
       }
       else {
-        strncpy(srcip, optarg, INET6_ADDRSTRLEN);
-        srcip[INET6_ADDRSTRLEN-1] = '\0';
+        if (strchr(optarg, ':') == NULL || parse_ip(optarg, srcip, srcpt) != 0) {
+          strncpy(srcip, optarg, INET6_ADDRSTRLEN+5);
+          srcip[INET6_ADDRSTRLEN+5-1] = '\0';
+          strncpy(srcpt, "0", 2);
+        }
       }
       break;
     case 'p':
@@ -225,11 +230,13 @@ int main ( int argc, char* argv[] ) {
   }
 
   if(! err) {
-    err = start_listener (inip, inpt, srcip, dstip, dstpt, pidfile, chroot, user);
+    err = start_listener (inip, inpt, srcip, srcpt, dstip, dstpt, pidfile, chroot, user);
   }
   
   if(srcip != NULL)
     free(srcip);
+  if(srcpt != NULL)
+    free(srcpt);
   if(dstip != NULL)
     free(dstip);
   if(inip != NULL)
