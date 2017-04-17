@@ -8,7 +8,8 @@ udpxd - A general purpose UDP relay/port forwarder/proxy
 
  Options:
  --listen     -l <ip:port>     listen for incoming requests
- --bind       -b <ip>          bind ip used for outgoing requests
+ --bind       -b <ip[:port]>   bind ip used for outgoing requests
+                               specify port for promiscuous mode
  --to         -t <ip:port>     destination to forward requests to
  --daemon     -d               daemon mode, fork into background
  --pidfile    -p <file>        pidfile, default: /var/run/udpxd.pid
@@ -140,7 +141,7 @@ L<https://github.com/TLINDEN/udpxd/issues>.
 
 This software is licensed under the GNU GENERAL PUBLIC LICENSE version 3.
 
-Copyright (c) 2015-2016 by T. v. Dein.
+Copyright (c) 2015-2017 by T. v. Dein.
 
 This software uses B<uthash> (bundled), which is
 Copyright (c) 2003-2013 by Troy D. Hanson.
