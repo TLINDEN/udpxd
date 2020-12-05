@@ -20,15 +20,15 @@ init:
 
 install:
     - ps: 'Start-FileDownload "http://cygwin.com/setup-x86.exe" -FileName "setup-x86.exe"'
-    - 'setup-x86.exe --quiet-mode --no-shortcuts --only-site --root "%CYG_ROOT%" --site "%CYG_MIRROR%" --local-package-dir "%CYG_CACHE%" --packages bind,netcat > NUL 2>&1'
-    - '%CYG_BASH% -lc "cygcheck -dc cygwin"'
+    - cmd: 'setup-x86.exe --quiet-mode --no-shortcuts --only-site --root "%CYG_ROOT%" --site "%CYG_MIRROR%" --local-package-dir "%CYG_CACHE%" --packages bind,netcat > NUL 2>&1'
+    - cmd: '%CYG_BASH% -lc "cygcheck -dc cygwin"'
 
 build_script:
-  - '%CYG_BASH% -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; make"'
-  - '%CYG_BASH% -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; cygstart --hide ./udpxd -l 127.0.0.1:53 -t 8.8.8.8:53"'
-  - '%CYG_BASH% -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; cygstart --hide ./udpxd -l [::1]:53 -t 8.8.8.8:53"'
-  - '%CYG_BASH% -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; dig www.google.de soa @127.0.0.1"'
-  - '%CYG_BASH% -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; dig www.google.de soa @::1"'
+  - cmd: '%CYG_BASH% -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; make"'
+  - cmd: '%CYG_BASH% -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; cygstart --hide ./udpxd -l 127.0.0.1:53 -t 8.8.8.8:53"'
+  - cmd: '%CYG_BASH% -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; cygstart --hide ./udpxd -l [::1]:53 -t 8.8.8.8:53"'
+  - cmd: '%CYG_BASH% -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; dig www.google.de soa @127.0.0.1"'
+  - cmd: '%CYG_BASH% -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; dig www.google.de soa @::1"'
 
 
   
