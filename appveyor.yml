@@ -14,7 +14,6 @@ platform:
   - Win32
 
 test: off
-build: off
 
 init:
   - git config --global core.autocrlf input
