@@ -95,7 +95,7 @@ host_t *get_host(char *ip, int port, struct sockaddr_in *v4, struct sockaddr_in6
 
     if(tmp->sin6_scope_id != 0) {
       host->ip = malloc(INET6_ADDRSTRLEN + 9); /* plus [ % ] \0 , scope*/
-      sprintf(host->ip, "[%s%%%d]", ip, tmp->sin6_scope_id);
+      sprintf(host->ip, "[%s%%%d]", myip, tmp->sin6_scope_id);
     }
     else {
       host->ip = malloc(INET6_ADDRSTRLEN + 3); /* plus [ ] \0 */      
