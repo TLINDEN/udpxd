@@ -31,10 +31,10 @@ MAN    = udpxd.1
 all: $(DST)
 
 $(DST): $(OBJS)
-	gcc $(OBJS) -o $(DST)
+	$(CC) $(OBJS) -o $(DST)
 
 %.o: %.c
-	gcc -c $(CFLAGS) $*.c -o $*.o
+	$(CC) -c $(CFLAGS) $*.c -o $*.o
 
 clean:
 	rm -f *.o $(DST)
