@@ -22,22 +22,21 @@
 #ifndef _HAVE_UDPXD_H
 #define _HAVE_UDPXD_H
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <unistd.h>
-#include <time.h>
 #include <getopt.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <unistd.h>
 
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <sys/types.h>
-#include <sys/fcntl.h>
 #include <arpa/inet.h>
+#include <fcntl.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 
-#define UDPXD_VERSION "0.0.4"
-
+#include "platform.h"
 
 void usage();
 int parse_ip(char *src, char *ip, char *pt);

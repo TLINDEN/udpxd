@@ -18,6 +18,8 @@
 #
 #    You can contact me by mail: <tom AT vondein DOT org>.
 
+.PHONY: all clean man install deprecation
+
 # warning: do not set -O to 2, see TODO
 CFLAGS = -Wall -Wextra -Werror -O1 -g
 LDFLAGS=
@@ -28,22 +30,25 @@ UID    = root
 GID    = 0
 MAN    = udpxd.1
 
-all: $(DST)
+all: deprecation $(DST)
 
-$(DST): $(OBJS)
+$(DST): deprecation $(OBJS)
 	$(CC) $(OBJS) -o $(DST)
 
-%.o: %.c
+%.o: deprecation %.c
 	$(CC) -c $(CFLAGS) $*.c -o $*.o
 
-clean:
-	rm -f *.o $(DST)
+clean: deprecation
+	rm -rf *.o $(DST) build .cache
 
-man:
+man: deprecation
 	pod2man udpxd.pod > udpxd.1
 
-install: $(DST)
+install: deprecation $(DST)
 	install -d -o $(UID) -g $(GID) $(PREFIX)/sbin
 	install -d -o $(UID) -g $(GID) $(PREFIX)/man/man1
 	install -o $(UID) -g $(GID) -m 555 $(DST) $(PREFIX)/sbin/
 	install -o $(UID) -g $(GID) -m 444 $(MAN) $(PREFIX)/man/man1/
+
+deprecation:
+	@echo "+++ DEPRECATION NOTE: Use meson & ninja to build please! +++"

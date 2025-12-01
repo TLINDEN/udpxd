@@ -1,0 +1,31 @@
+# build release
+
+labels:
+  platform: linux/amd64
+    
+steps:
+  compile:
+    when:
+      event: [tag,manual]
+    image: alpine:latest
+    commands:
+      - apk update
+      - apk add --no-cache bash build-base gdb pkgconfig meson ninja perl git
+      - meson setup --reconfigure --prefer-static  -Dc_link_args="-static -ldl" --buildtype=release build
+      - ninja -C build
+      - meson dist -C build --formats xztar,gztar,zip --allow-dirty
+      - file build/udpxd
+      - mv build/udpxd udpxd-linux-amd64-$CI_COMMIT_TAG
+      - mv build/meson-dist/* .
+
+  release:
+    image: alpine:latest
+    when:
+      event: [tag,manual]
+    environment:
+      DEPLOY_TOKEN:
+        from_secret: DEPLOY_TOKEN
+    commands:
+      - apk update
+      - apk add --no-cache bash httpie jq git
+      - .woodpecker/release.sh udpxd-*

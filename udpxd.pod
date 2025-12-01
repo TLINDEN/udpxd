@@ -135,7 +135,7 @@ B</var/run/udpxd.pid>: created if running in daemon mode (B<-d>).
 
 In order to report a bug, unexpected behavior, feature requests
 or to submit a patch, please open an issue on github:
-L<https://github.com/TLINDEN/udpxd/issues>.
+L<https://codeberg.org/scip/udpxd/issues>.
 
 =head1 LICENSE
 
