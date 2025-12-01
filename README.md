@@ -1,6 +1,8 @@
 [![status-badge](https://ci.codeberg.org/api/badges/15646/status.svg)](https://ci.codeberg.org/repos/15646)
 [![License](https://img.shields.io/badge/license-GPL-blue.svg)](https://codeberg.org/scip/udpxd/raw/branch/main/LICENSE)
 
+> [!CAUTION]
+> This software is now being maintained on [Codeberg](https://codeberg.org/scip/udpxd/).
 
 ## UDPXD - A general purpose UDP relay/port forwarder/proxy
 
